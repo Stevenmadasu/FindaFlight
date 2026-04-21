@@ -1,0 +1,292 @@
+/**
+ * FindaFlight — Mock Flight Data Generator
+ *
+ * Generates realistic flight data for demos and when SerpAPI is unavailable.
+ * Dynamically creates results based on provided search params.
+ */
+
+import { FlightOption } from '@/types/flight';
+
+// Airline database
+const AIRLINES = [
+  { name: 'Delta Air Lines', code: 'DL', logo: 'https://www.gstatic.com/flights/airline_logos/70px/DL.png' },
+  { name: 'United Airlines', code: 'UA', logo: 'https://www.gstatic.com/flights/airline_logos/70px/UA.png' },
+  { name: 'American Airlines', code: 'AA', logo: 'https://www.gstatic.com/flights/airline_logos/70px/AA.png' },
+  { name: 'Southwest Airlines', code: 'WN', logo: 'https://www.gstatic.com/flights/airline_logos/70px/WN.png' },
+  { name: 'JetBlue Airways', code: 'B6', logo: 'https://www.gstatic.com/flights/airline_logos/70px/B6.png' },
+  { name: 'Alaska Airlines', code: 'AS', logo: 'https://www.gstatic.com/flights/airline_logos/70px/AS.png' },
+  { name: 'Spirit Airlines', code: 'NK', logo: 'https://www.gstatic.com/flights/airline_logos/70px/NK.png' },
+  { name: 'Frontier Airlines', code: 'F9', logo: 'https://www.gstatic.com/flights/airline_logos/70px/F9.png' },
+];
+
+// Airport database with names
+const AIRPORTS: Record<string, string> = {
+  'ATL': 'Hartsfield-Jackson Atlanta Intl',
+  'DFW': 'Dallas/Fort Worth Intl',
+  'DEN': 'Denver Intl',
+  'ORD': "Chicago O'Hare Intl",
+  'LAX': 'Los Angeles Intl',
+  'JFK': 'John F. Kennedy Intl',
+  'SFO': 'San Francisco Intl',
+  'SEA': 'Seattle-Tacoma Intl',
+  'LAS': 'Harry Reid Intl',
+  'MCO': 'Orlando Intl',
+  'EWR': 'Newark Liberty Intl',
+  'MIA': 'Miami Intl',
+  'PHX': 'Phoenix Sky Harbor Intl',
+  'IAH': 'George Bush Intercontinental',
+  'BOS': 'Boston Logan Intl',
+  'MSP': 'Minneapolis-Saint Paul Intl',
+  'DTW': 'Detroit Metro Wayne County',
+  'CLT': 'Charlotte Douglas Intl',
+  'FLL': 'Fort Lauderdale-Hollywood Intl',
+  'BWI': 'Baltimore/Washington Intl',
+  'SLC': 'Salt Lake City Intl',
+  'SAN': 'San Diego Intl',
+  'DCA': 'Ronald Reagan Washington National',
+  'TPA': 'Tampa Intl',
+  'AUS': 'Austin-Bergstrom Intl',
+  'CID': 'The Eastern Iowa Airport',
+  'DSM': 'Des Moines Intl',
+  'STL': 'St. Louis Lambert Intl',
+  'PIT': 'Pittsburgh Intl',
+  'RDU': 'Raleigh-Durham Intl',
+  'BNA': 'Nashville Intl',
+  'PDX': 'Portland Intl',
+  'IND': 'Indianapolis Intl',
+  'MCI': 'Kansas City Intl',
+  'MDW': 'Chicago Midway Intl',
+  'HNL': 'Daniel K. Inouye Intl',
+  'OAK': 'Oakland Intl',
+};
+
+// Hub connections for layovers
+const HUB_AIRPORTS = ['ATL', 'ORD', 'DFW', 'DEN', 'JFK', 'LAX', 'CLT', 'MIA', 'IAH', 'MSP', 'DTW', 'SLC', 'PHX'];
+
+function getAirportName(code: string): string {
+  return AIRPORTS[code.toUpperCase()] || `${code.toUpperCase()} Airport`;
+}
+
+/**
+ * Pseudo-random number generator seeded by string (deterministic results per route).
+ */
+function seededRandom(seed: string): () => number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+    h = Math.imul(h ^ (h >>> 13), 0x45d9f3b);
+    h = (h ^ (h >>> 16)) >>> 0;
+    return h / 4294967296;
+  };
+}
+
+/**
+ * Generate mock flights for a given origin → destination route.
+ */
+export function generateMockFlights(
+  origin: string,
+  destination: string,
+  departureDate: string,
+): FlightOption[] {
+  const from = origin.toUpperCase();
+  const to = destination.toUpperCase();
+  const seed = `${from}-${to}-${departureDate}`;
+  const rng = seededRandom(seed);
+
+  const flights: FlightOption[] = [];
+
+  // Generate 2-3 direct flights
+  const numDirect = 2 + Math.floor(rng() * 2);
+  for (let i = 0; i < numDirect; i++) {
+    const airline = AIRLINES[Math.floor(rng() * AIRLINES.length)];
+    const basePrice = 120 + Math.floor(rng() * 350);
+    const duration = 90 + Math.floor(rng() * 240); // 1.5h – 5.5h
+    const departHour = 6 + Math.floor(rng() * 14); // 6am – 8pm
+    const departMin = Math.floor(rng() * 4) * 15; // 00, 15, 30, 45
+    const arriveMinutes = departHour * 60 + departMin + duration;
+    const arriveHour = Math.floor(arriveMinutes / 60) % 24;
+    const arriveMin = arriveMinutes % 60;
+
+    flights.push({
+      id: `mock-direct-${i}`,
+      flights: [
+        {
+          departure_airport: {
+            name: getAirportName(from),
+            id: from,
+            time: `${departureDate} ${String(departHour).padStart(2, '0')}:${String(departMin).padStart(2, '0')}`,
+          },
+          arrival_airport: {
+            name: getAirportName(to),
+            id: to,
+            time: `${departureDate} ${String(arriveHour).padStart(2, '0')}:${String(arriveMin).padStart(2, '0')}`,
+          },
+          duration,
+          airplane: rng() > 0.5 ? 'Boeing 737' : 'Airbus A320',
+          airline: airline.name,
+          airline_logo: airline.logo,
+          flight_number: `${airline.code} ${1000 + Math.floor(rng() * 9000)}`,
+          legroom: rng() > 0.5 ? '31 in' : '30 in',
+        },
+      ],
+      total_duration: duration,
+      price: basePrice,
+      type: 'direct',
+      airline_logo: airline.logo,
+      stops: 0,
+    });
+  }
+
+  // Generate 3-5 connecting flights (1 stop)
+  const numConnecting = 3 + Math.floor(rng() * 3);
+  for (let i = 0; i < numConnecting; i++) {
+    const airline1 = AIRLINES[Math.floor(rng() * AIRLINES.length)];
+    const airline2 = rng() > 0.6 ? airline1 : AIRLINES[Math.floor(rng() * AIRLINES.length)];
+
+    // Pick a hub that isn't origin or destination
+    const availableHubs = HUB_AIRPORTS.filter(h => h !== from && h !== to);
+    const hub = availableHubs[Math.floor(rng() * availableHubs.length)];
+
+    const leg1Duration = 60 + Math.floor(rng() * 180); // 1h – 4h
+    const layoverDuration = 45 + Math.floor(rng() * 180); // 45m – 3h45m
+    const leg2Duration = 60 + Math.floor(rng() * 180);
+    const totalDuration = leg1Duration + layoverDuration + leg2Duration;
+
+    // Price is sometimes cheaper, sometimes not (connecting usually cheaper)
+    const directAvg = flights.filter(f => f.stops === 0).reduce((s, f) => s + f.price, 0) / Math.max(1, flights.filter(f => f.stops === 0).length);
+    const priceMultiplier = 0.6 + rng() * 0.7; // 60% – 130% of direct avg
+    const price = Math.round(directAvg * priceMultiplier);
+
+    const departHour = 5 + Math.floor(rng() * 15);
+    const departMin = Math.floor(rng() * 4) * 15;
+
+    const leg1ArrMinutes = departHour * 60 + departMin + leg1Duration;
+    const leg2DepMinutes = leg1ArrMinutes + layoverDuration;
+    const leg2ArrMinutes = leg2DepMinutes + leg2Duration;
+
+    flights.push({
+      id: `mock-connect-${i}`,
+      flights: [
+        {
+          departure_airport: {
+            name: getAirportName(from),
+            id: from,
+            time: `${departureDate} ${String(departHour).padStart(2, '0')}:${String(departMin).padStart(2, '0')}`,
+          },
+          arrival_airport: {
+            name: getAirportName(hub),
+            id: hub,
+            time: `${departureDate} ${String(Math.floor(leg1ArrMinutes / 60) % 24).padStart(2, '0')}:${String(leg1ArrMinutes % 60).padStart(2, '0')}`,
+          },
+          duration: leg1Duration,
+          airplane: 'Boeing 737',
+          airline: airline1.name,
+          airline_logo: airline1.logo,
+          flight_number: `${airline1.code} ${1000 + Math.floor(rng() * 9000)}`,
+        },
+        {
+          departure_airport: {
+            name: getAirportName(hub),
+            id: hub,
+            time: `${departureDate} ${String(Math.floor(leg2DepMinutes / 60) % 24).padStart(2, '0')}:${String(leg2DepMinutes % 60).padStart(2, '0')}`,
+          },
+          arrival_airport: {
+            name: getAirportName(to),
+            id: to,
+            time: `${departureDate} ${String(Math.floor(leg2ArrMinutes / 60) % 24).padStart(2, '0')}:${String(leg2ArrMinutes % 60).padStart(2, '0')}`,
+          },
+          duration: leg2Duration,
+          airplane: 'Airbus A321',
+          airline: airline2.name,
+          airline_logo: airline2.logo,
+          flight_number: `${airline2.code} ${1000 + Math.floor(rng() * 9000)}`,
+        },
+      ],
+      layovers: [
+        {
+          duration: layoverDuration,
+          name: getAirportName(hub),
+          id: hub,
+          overnight: layoverDuration > 360,
+        },
+      ],
+      total_duration: totalDuration,
+      price: Math.max(79, price), // floor at $79
+      type: 'connecting',
+      airline_logo: airline1.logo,
+      stops: 1,
+    });
+  }
+
+  // Generate 1-2 multi-stop flights (2 stops) — usually cheapest
+  const numMulti = 1 + Math.floor(rng() * 2);
+  for (let i = 0; i < numMulti; i++) {
+    const airline = AIRLINES[Math.floor(rng() * AIRLINES.length)];
+    const availableHubs = HUB_AIRPORTS.filter(h => h !== from && h !== to);
+    const hub1 = availableHubs[Math.floor(rng() * availableHubs.length)];
+    const hub2 = availableHubs.filter(h => h !== hub1)[Math.floor(rng() * (availableHubs.length - 1))];
+
+    const leg1 = 60 + Math.floor(rng() * 120);
+    const lay1 = 50 + Math.floor(rng() * 120);
+    const leg2 = 45 + Math.floor(rng() * 120);
+    const lay2 = 50 + Math.floor(rng() * 120);
+    const leg3 = 60 + Math.floor(rng() * 120);
+    const total = leg1 + lay1 + leg2 + lay2 + leg3;
+
+    const directAvg = flights.filter(f => f.stops === 0).reduce((s, f) => s + f.price, 0) / Math.max(1, flights.filter(f => f.stops === 0).length);
+    const price = Math.max(69, Math.round(directAvg * (0.45 + rng() * 0.4)));
+
+    const dH = 5 + Math.floor(rng() * 12);
+    const dM = Math.floor(rng() * 4) * 15;
+
+    flights.push({
+      id: `mock-multi-${i}`,
+      flights: [
+        {
+          departure_airport: { name: getAirportName(from), id: from, time: `${departureDate} ${String(dH).padStart(2, '0')}:${String(dM).padStart(2, '0')}` },
+          arrival_airport: { name: getAirportName(hub1), id: hub1, time: `${departureDate} ${String(Math.floor((dH * 60 + dM + leg1) / 60) % 24).padStart(2, '0')}:${String((dH * 60 + dM + leg1) % 60).padStart(2, '0')}` },
+          duration: leg1,
+          airplane: 'Embraer 175',
+          airline: airline.name,
+          airline_logo: airline.logo,
+          flight_number: `${airline.code} ${1000 + Math.floor(rng() * 9000)}`,
+        },
+        {
+          departure_airport: { name: getAirportName(hub1), id: hub1, time: `${departureDate} ${String(Math.floor((dH * 60 + dM + leg1 + lay1) / 60) % 24).padStart(2, '0')}:${String((dH * 60 + dM + leg1 + lay1) % 60).padStart(2, '0')}` },
+          arrival_airport: { name: getAirportName(hub2), id: hub2, time: `${departureDate} ${String(Math.floor((dH * 60 + dM + leg1 + lay1 + leg2) / 60) % 24).padStart(2, '0')}:${String((dH * 60 + dM + leg1 + lay1 + leg2) % 60).padStart(2, '0')}` },
+          duration: leg2,
+          airplane: 'Boeing 737',
+          airline: airline.name,
+          airline_logo: airline.logo,
+          flight_number: `${airline.code} ${1000 + Math.floor(rng() * 9000)}`,
+        },
+        {
+          departure_airport: { name: getAirportName(hub2), id: hub2, time: `${departureDate} ${String(Math.floor((dH * 60 + dM + leg1 + lay1 + leg2 + lay2) / 60) % 24).padStart(2, '0')}:${String((dH * 60 + dM + leg1 + lay1 + leg2 + lay2) % 60).padStart(2, '0')}` },
+          arrival_airport: { name: getAirportName(to), id: to, time: `${departureDate} ${String(Math.floor((dH * 60 + dM + total) / 60) % 24).padStart(2, '0')}:${String((dH * 60 + dM + total) % 60).padStart(2, '0')}` },
+          duration: leg3,
+          airplane: 'Airbus A319',
+          airline: airline.name,
+          airline_logo: airline.logo,
+          flight_number: `${airline.code} ${1000 + Math.floor(rng() * 9000)}`,
+        },
+      ],
+      layovers: [
+        { duration: lay1, name: getAirportName(hub1), id: hub1, overnight: false },
+        { duration: lay2, name: getAirportName(hub2), id: hub2, overnight: false },
+      ],
+      total_duration: total,
+      price,
+      type: 'multi-stop',
+      airline_logo: airline.logo,
+      stops: 2,
+    });
+  }
+
+  // Sort by price
+  flights.sort((a, b) => a.price - b.price);
+
+  return flights;
+}
