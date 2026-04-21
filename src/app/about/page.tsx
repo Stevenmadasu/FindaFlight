@@ -9,7 +9,6 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen hero-pattern">
       <div className="max-w-3xl mx-auto px-4 py-12 md:py-20">
-        {/* Header */}
         <div className="text-center mb-14 animate-fade-in">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             About <span className="gradient-text">FindaFlight</span>
@@ -19,7 +18,6 @@ export default function AboutPage() {
           </p>
         </div>
 
-        {/* What is FindaFlight */}
         <section className="glass-strong rounded-2xl p-6 md:p-8 mb-8 animate-slide-up">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-lg flex items-center justify-center">
@@ -47,7 +45,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* How It Works */}
         <section className="glass-strong rounded-2xl p-6 md:p-8 mb-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
           <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-lg flex items-center justify-center">
@@ -55,7 +52,7 @@ export default function AboutPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
               </svg>
             </div>
-            How It Works
+            How Standard Search Works
           </h2>
           <div className="space-y-6">
             <div className="flex gap-4">
@@ -83,23 +80,46 @@ export default function AboutPage() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-teal-500/20 border border-teal-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm font-bold text-teal-400">3</span>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-1">Make an informed decision</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">
-                  Our top recommendation includes a plain-language explanation of why it&apos;s the best
-                  option. Sort by any criteria, compare alternatives, and book with confidence through
-                  your preferred airline or travel site.
-                </p>
-              </div>
+          </div>
+        </section>
+
+        <section className="glass-strong rounded-2xl p-6 md:p-8 mb-8 animate-slide-up" style={{ animationDelay: '150ms' }}>
+          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </div>
+            Layover Destination Search
+          </h2>
+          <div className="space-y-4 text-gray-300 leading-relaxed">
+            <p>
+              FindaFlight supports an advanced discovery mode known as <strong>Layover Destination Search</strong> (commonly referred to as hidden-city ticketing). 
+            </p>
+            <p>
+              When you enable this mode, we look for flights where your intended destination is actually just an intermediate layover on a longer itinerary. Because airlines price tickets based on market demand rather than distance, these routes can sometimes be dramatically cheaper or open up direct flight availability.
+            </p>
+            <div className="bg-white/[0.04] p-4 rounded-xl border border-white/[0.06] mt-4">
+               <h3 className="text-teal-400 font-semibold mb-2">How One-Way Pairing Works</h3>
+               <p className="text-sm text-gray-400">
+                 Since layover/hidden-city strategies only work for one-way outbound flights (if you skip the final leg, the airline cancels your return), FindaFlight automatically pairs a generated outbound layover match with a standard one-way return flight from your destination. 
+                 <br/><br/>
+                 When you book, you simply purchase two independent one-way tickets:
+               </p>
+               <ul className="list-disc ml-6 mt-2 text-sm text-gray-400 space-y-1 mt-2">
+                 <li><strong>Ticket 1 (Outbound):</strong> A flight from your Origin to some distant City, with a layover in your True Destination.</li>
+                 <li><strong>Ticket 2 (Return):</strong> A standard flight from your True Destination back to your Origin.</li>
+               </ul>
+            </div>
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 mt-4">
+              <h3 className="text-orange-400 font-semibold mb-1">Important Disclaimers</h3>
+              <p className="text-sm text-orange-200/80">
+                You must leave the airport during your layover and never check baggage on the outbound flight (otherwise your bags will fly to the ticketed final destination). Users must review airline policies around hidden-city ticketing themselves. FindaFlight is purely for discovery and comparison.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* FAQ */}
         <section className="glass-strong rounded-2xl p-6 md:p-8 animate-slide-up" style={{ animationDelay: '200ms' }}>
           <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
@@ -127,17 +147,6 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="border-t border-white/[0.06] pt-6">
-              <h3 className="text-white font-semibold mb-2">How does the scoring work?</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Each flight receives a composite score (0-100) based on three weighted factors:
-                <span className="text-white"> price (40%)</span>,
-                <span className="text-white"> duration (35%)</span>, and
-                <span className="text-white"> number of stops (25%)</span>.
-                Lower values (cheaper, faster, fewer stops) get higher scores. The flight with the
-                highest composite score is our &quot;Best Overall&quot; recommendation.
-              </p>
-            </div>
-            <div className="border-t border-white/[0.06] pt-6">
               <h3 className="text-white font-semibold mb-2">What airport codes should I use?</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
                 Use standard 3-letter IATA airport codes. For example: LAX (Los Angeles), JFK (New York),
@@ -148,14 +157,13 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* CTA */}
         <div className="text-center mt-12">
           <a
             href="/#search"
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             Search Flights Now
           </a>

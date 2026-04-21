@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchFlights } from '@/lib/serpapi';
-import { generateMockFlights } from '@/lib/mockData';
-import { rankFlights, generateRecommendation } from '@/lib/scoring';
+import { generateMockFlights, generateMockLayoverFlights } from '@/lib/mockData';
+import { rankFlights, rankPairedItineraries, generateRecommendation } from '@/lib/scoring';
 import { getServerConfig } from '@/lib/config';
-import { FlightSearchParams, SearchResults } from '@/types/flight';
+import { FlightSearchParams, SearchResults, SearchMode } from '@/types/flight';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
     // Validate required fields
-    const { origin, destination, departureDate, returnDate } = body as FlightSearchParams;
+    const { origin, destination, departureDate, returnDate, mode = 'standard' } = body as FlightSearchParams;
 
     if (!origin || !destination || !departureDate) {
       return NextResponse.json(
         { error: 'Missing required fields: origin, destination, departureDate' },
+        { status: 400 }
+      );
+    }
+
+    if (mode === 'layover' && !returnDate) {
+      return NextResponse.json(
+        { error: 'Return date is required for layover destination searches' },
         { status: 400 }
       );
     }
@@ -28,22 +35,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(departureDate)) {
-      return NextResponse.json(
-        { error: 'Invalid date format. Use YYYY-MM-DD' },
-        { status: 400 }
-      );
-    }
-
-    if (returnDate && !dateRegex.test(returnDate)) {
-      return NextResponse.json(
-        { error: 'Invalid return date format. Use YYYY-MM-DD' },
-        { status: 400 }
-      );
-    }
-
     // Same origin and destination check
     if (origin.toUpperCase() === destination.toUpperCase()) {
       return NextResponse.json(
@@ -53,53 +44,98 @@ export async function POST(request: NextRequest) {
     }
 
     const config = getServerConfig();
-    let rawFlights;
-    let isMockData = false;
+    let isMockData = config.useMockData;
 
-    // Try SerpAPI first, fall back to mock data
-    if (!config.useMockData) {
-      try {
-        rawFlights = await searchFlights(
-          origin.toUpperCase(),
-          destination.toUpperCase(),
+    if (mode === 'layover') {
+      // FOR LAYOVER MODE (HYBRID/MOCK APPROACH)
+      // To keep demos reliable and fast, outbound layovers are mocked, while return can be live.
+      
+      let outbounds = generateMockLayoverFlights(origin.toUpperCase(), destination.toUpperCase(), departureDate);
+      let returns;
+
+      if (!config.useMockData && returnDate) {
+        try {
+          returns = await searchFlights(destination.toUpperCase(), origin.toUpperCase(), returnDate, config.serpApiKey);
+          if (!returns || returns.length === 0) throw new Error("Empty return flights");
+        } catch (err) {
+          console.warn('SerpAPI failed for return leg, using mock', err);
+          returns = generateMockFlights(destination.toUpperCase(), origin.toUpperCase(), returnDate);
+          isMockData = true;
+        }
+      } else {
+        returns = generateMockFlights(destination.toUpperCase(), origin.toUpperCase(), returnDate!);
+        isMockData = true;
+      }
+
+      const rankedOutbounds = rankFlights(outbounds);
+      const rankedReturns = rankFlights(returns);
+      
+      const pairedItineraries = rankPairedItineraries(rankedOutbounds, rankedReturns);
+      const recommendation = generateRecommendation(pairedItineraries, true);
+
+      const results: SearchResults = {
+        mode,
+        pairedItineraries,
+        recommendation,
+        searchParams: {
+          origin: origin.toUpperCase(),
+          destination: destination.toUpperCase(),
           departureDate,
-          config.serpApiKey,
-        );
-      } catch (apiError) {
-        console.warn('SerpAPI failed, falling back to mock data:', apiError);
+          returnDate,
+          mode
+        },
+        isMockData,
+      };
+
+      return NextResponse.json(results);
+
+    } else {
+      // STANDARD SEARCH
+      let rawFlights;
+
+      if (!config.useMockData) {
+        try {
+          rawFlights = await searchFlights(
+            origin.toUpperCase(),
+            destination.toUpperCase(),
+            departureDate,
+            config.serpApiKey,
+          );
+        } catch (apiError) {
+          console.warn('SerpAPI failed, falling back to mock data:', apiError);
+          rawFlights = generateMockFlights(origin.toUpperCase(), destination.toUpperCase(), departureDate);
+          isMockData = true;
+        }
+      } else {
         rawFlights = generateMockFlights(origin.toUpperCase(), destination.toUpperCase(), departureDate);
         isMockData = true;
       }
-    } else {
-      rawFlights = generateMockFlights(origin.toUpperCase(), destination.toUpperCase(), departureDate);
-      isMockData = true;
+
+      if (!rawFlights || rawFlights.length === 0) {
+        rawFlights = generateMockFlights(origin.toUpperCase(), destination.toUpperCase(), departureDate);
+        isMockData = true;
+      }
+
+      const rankedFlights = rankFlights(rawFlights);
+      const recommendation = generateRecommendation(rankedFlights, false);
+
+      const results: SearchResults = {
+        mode,
+        flights: rankedFlights,
+        recommendation,
+        searchParams: {
+          origin: origin.toUpperCase(),
+          destination: destination.toUpperCase(),
+          departureDate,
+          returnDate,
+          mode
+        },
+        isMockData,
+      };
+
+      return NextResponse.json(results);
     }
 
-    // If SerpAPI returned empty results, use mock data
-    if (!rawFlights || rawFlights.length === 0) {
-      rawFlights = generateMockFlights(origin.toUpperCase(), destination.toUpperCase(), departureDate);
-      isMockData = true;
-    }
-
-    // Rank and score flights
-    const rankedFlights = rankFlights(rawFlights);
-
-    // Generate recommendation
-    const recommendation = generateRecommendation(rankedFlights);
-
-    const results: SearchResults = {
-      flights: rankedFlights,
-      recommendation,
-      searchParams: {
-        origin: origin.toUpperCase(),
-        destination: destination.toUpperCase(),
-        departureDate,
-        returnDate,
-      },
-      isMockData,
-    };
-
-    return NextResponse.json(results);
   } catch (error) {
     console.error('Search API error:', error);
     return NextResponse.json(

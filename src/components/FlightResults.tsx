@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { SearchResults } from '@/types/flight';
+import { SearchResults, RankedFlight, PairedItinerary } from '@/types/flight';
 import FlightCard from './FlightCard';
+import PairedFlightCard from './PairedFlightCard';
 import RecommendationCard from './RecommendationCard';
 
 interface FlightResultsProps {
@@ -17,49 +18,69 @@ export default function FlightResults({ results }: FlightResultsProps) {
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  const isLayoverMode = results.mode === 'layover';
+  const flightsArray = isLayoverMode 
+    ? (results.pairedItineraries || []) as Array<RankedFlight | PairedItinerary>
+    : (results.flights || []) as Array<RankedFlight | PairedItinerary>;
+
+  // Type guards
+  const isPaired = (f: RankedFlight | PairedItinerary): f is PairedItinerary => 'combinedPrice' in f;
+  
+  const getPrice = (f: RankedFlight | PairedItinerary) => isPaired(f) ? f.combinedPrice : f.price;
+  const getDuration = (f: RankedFlight | PairedItinerary) => isPaired(f) ? f.totalDuration : f.total_duration;
+  const getStops = (f: RankedFlight | PairedItinerary) => isPaired(f) ? f.outbound.stops : f.stops;
+
   // Price range from results
   const priceRange = useMemo(() => {
-    const prices = results.flights.map(f => f.price);
+    if (flightsArray.length === 0) return { min: 0, max: 0 };
+    const prices = flightsArray.map(f => getPrice(f));
     return { min: Math.min(...prices), max: Math.max(...prices) };
-  }, [results.flights]);
+  }, [flightsArray]);
 
   // Filter and sort
   const filteredFlights = useMemo(() => {
-    let flights = [...results.flights];
+    let list = [...flightsArray];
 
     // Apply filters
     if (maxStops !== null) {
-      flights = flights.filter(f => f.stops <= maxStops);
+      list = list.filter(f => getStops(f) <= maxStops);
     }
     if (maxPrice !== null) {
-      flights = flights.filter(f => f.price <= maxPrice);
+      list = list.filter(f => getPrice(f) <= maxPrice);
     }
 
     // Sort
     switch (sortBy) {
       case 'best':
-        return flights.sort((a, b) => b.score - a.score);
+        return list.sort((a, b) => b.score - a.score);
       case 'price':
-        return flights.sort((a, b) => a.price - b.price);
+        return list.sort((a, b) => getPrice(a) - getPrice(b));
       case 'duration':
-        return flights.sort((a, b) => a.total_duration - b.total_duration);
+        return list.sort((a, b) => getDuration(a) - getDuration(b));
       case 'stops':
-        return flights.sort((a, b) => a.stops - b.stops);
+        return list.sort((a, b) => getStops(a) - getStops(b));
       default:
-        return flights;
+        return list;
     }
-  }, [results.flights, sortBy, maxStops, maxPrice]);
+  }, [flightsArray, sortBy, maxStops, maxPrice]);
 
-  const totalFlights = results.flights.length;
-  const cheapest = results.flights.reduce((min, f) => f.price < min.price ? f : min, results.flights[0]);
-  const fastest = results.flights.reduce((min, f) => f.total_duration < min.total_duration ? f : min, results.flights[0]);
-  const directCount = results.flights.filter(f => f.stops === 0).length;
+  const totalFlights = flightsArray.length;
+  
+  const cheapest = flightsArray.length > 0 
+    ? flightsArray.reduce((min, f) => getPrice(f) < getPrice(min) ? f : min, flightsArray[0])
+    : null;
+    
+  const fastest = flightsArray.length > 0
+    ? flightsArray.reduce((min, f) => getDuration(f) < getDuration(min) ? f : min, flightsArray[0])
+    : null;
+    
+  const directCount = flightsArray.filter(f => getStops(f) === 0).length;
 
   // Get unique stop counts
   const availableStops = useMemo(() => {
-    const stops = [...new Set(results.flights.map(f => f.stops))].sort();
+    const stops = [...new Set(flightsArray.map(f => getStops(f)))].sort();
     return stops;
-  }, [results.flights]);
+  }, [flightsArray]);
 
   const activeFilterCount = (maxStops !== null ? 1 : 0) + (maxPrice !== null ? 1 : 0);
 
@@ -72,41 +93,38 @@ export default function FlightResults({ results }: FlightResultsProps) {
     return (
       <div className="mt-10 text-center animate-fade-in">
         <div className="glass-strong rounded-2xl p-10 max-w-lg mx-auto">
-          <svg className="w-16 h-16 mx-auto mb-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <svg className="w-16 h-16 mx-auto mb-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <h3 className="text-xl font-bold text-white mb-3">No flights found</h3>
           <p className="text-gray-400 mb-6">We couldn&apos;t find any flights for this route.</p>
-          <div className="space-y-2 text-sm text-gray-500">
-            <p>💡 Try adjusting your dates</p>
-            <p>💡 Try a nearby departure city</p>
-            <p>💡 Check your airport codes</p>
-          </div>
         </div>
       </div>
     );
   }
+
+  const fastestDur = fastest ? getDuration(fastest) : 0;
 
   return (
     <div className="mt-8 animate-fade-in">
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="glass rounded-xl p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Flights Found</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider">
+            {isLayoverMode ? 'Layover Matches' : 'Flights Found'}
+          </p>
           <p className="text-2xl font-bold text-white mt-1">{totalFlights}</p>
         </div>
         <div className="glass rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">From</p>
-          <p className="text-2xl font-bold text-teal-400 mt-1">${cheapest.price}</p>
+          <p className="text-2xl font-bold text-teal-400 mt-1">${cheapest ? getPrice(cheapest) : 0}</p>
         </div>
         <div className="glass rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Fastest</p>
           <p className="text-2xl font-bold text-amber-400 mt-1">
-            {Math.floor(fastest.total_duration / 60)}h {fastest.total_duration % 60}m
+            {Math.floor(fastestDur / 60)}h {fastestDur % 60}m
           </p>
         </div>
         <div className="glass rounded-xl p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Direct</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Direct Routes</p>
           <p className="text-2xl font-bold text-indigo-400 mt-1">{directCount}</p>
         </div>
       </div>
@@ -114,11 +132,11 @@ export default function FlightResults({ results }: FlightResultsProps) {
       {/* Mock Data Indicator */}
       {results.isMockData && (
         <div className="mb-5 flex items-center gap-2 px-4 py-2.5 bg-amber-500/[0.08] border border-amber-500/20 rounded-xl text-sm">
-          <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <span className="text-amber-300/80">
-            Showing simulated results for demonstration. Real-time data available with API integration.
+            {isLayoverMode 
+              ? 'Layover match search runs via a hybrid synthesized engine to provide real-time demonstration speeds.' 
+              : 'Showing simulated results for demonstration. Real-time data available with API integration.'}
           </span>
         </div>
       )}
@@ -132,14 +150,14 @@ export default function FlightResults({ results }: FlightResultsProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-white">
-            {filteredFlights.length === totalFlights ? 'All Flights' : `${filteredFlights.length} of ${totalFlights} Flights`}
+            {filteredFlights.length === totalFlights ? 'All Iterations' : `${filteredFlights.length} of ${totalFlights} Iterations`}
             <span className="text-gray-500 font-normal text-sm ml-2">
-              {results.searchParams.origin} → {results.searchParams.destination}
+              {results.searchParams.origin} → {isLayoverMode ? 'Layover at ' : ''}{results.searchParams.destination}
             </span>
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Filter Toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -188,7 +206,6 @@ export default function FlightResults({ results }: FlightResultsProps) {
       {showFilters && (
         <div className="mb-5 glass rounded-xl p-5 animate-slide-down">
           <div className="flex flex-col sm:flex-row gap-6">
-            {/* Max Stops Filter */}
             <div className="flex-1">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                 Max Stops
@@ -210,10 +227,9 @@ export default function FlightResults({ results }: FlightResultsProps) {
                     {option.label}
                   </button>
                 ))}
-              </div>
+            </div>
             </div>
 
-            {/* Max Price Filter */}
             <div className="flex-1">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                 Max Price: {maxPrice !== null ? `$${maxPrice}` : 'Any'}
@@ -236,15 +252,9 @@ export default function FlightResults({ results }: FlightResultsProps) {
             </div>
           </div>
 
-          {/* Clear Filters */}
           {activeFilterCount > 0 && (
-            <button
-              onClick={clearFilters}
-              className="mt-4 text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+            <button onClick={clearFilters} className="mt-4 text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               Clear all filters
             </button>
           )}
@@ -252,19 +262,20 @@ export default function FlightResults({ results }: FlightResultsProps) {
       )}
 
       {/* Flight List */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {filteredFlights.length > 0 ? (
-          filteredFlights.map((flight, index) => (
-            <FlightCard key={flight.id} flight={flight} index={index} />
-          ))
+          filteredFlights.map((item, index) => {
+            if (isPaired(item)) {
+              return <PairedFlightCard key={item.id} paired={item} />;
+            } else {
+              return <FlightCard key={item.id} flight={item} index={index} />;
+            }
+          })
         ) : (
           <div className="text-center py-10 glass rounded-xl">
             <p className="text-gray-400 mb-2">No flights match your filters</p>
-            <button
-              onClick={clearFilters}
-              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
-            >
-              Clear filters to see all {totalFlights} flights
+            <button onClick={clearFilters} className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
+              Clear filters to see all
             </button>
           </div>
         )}

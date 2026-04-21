@@ -9,7 +9,7 @@
  * Lower price / duration / stops → higher score.
  */
 
-import { FlightOption, RankedFlight, FlightBadge, Recommendation } from '@/types/flight';
+import { FlightOption, RankedFlight, FlightBadge, Recommendation, PairedItinerary } from '@/types/flight';
 
 // Scoring weights
 const WEIGHT_PRICE = 0.40;
@@ -77,72 +77,143 @@ export function rankFlights(flights: FlightOption[]): RankedFlight[] {
 }
 
 /**
- * Assign "Best Overall", "Cheapest", and "Fastest" badges to flights.
- * Each badge is assigned to exactly one flight (the top one in that category).
+ * Assign "Best Overall", "Cheapest", and "Fastest" badges to items.
  */
-function assignBadges(flights: RankedFlight[]): void {
-  if (flights.length === 0) return;
+function assignBadges(items: { price: number; totalDuration?: number; total_duration?: number; badges: FlightBadge[] }[]): void {
+  if (items.length === 0) return;
 
   // Best Overall = highest composite score (already sorted, so index 0)
-  flights[0].badges.push('best_overall');
+  items[0].badges.push('best_overall');
 
   // Cheapest = lowest price
-  const cheapest = flights.reduce((min, f) => f.price < min.price ? f : min, flights[0]);
+  const cheapest = items.reduce((min, f) => f.price < min.price ? f : min, items[0]);
   if (!cheapest.badges.includes('best_overall')) {
-    cheapest.badges.push('cheapest');
-  } else {
-    // If best overall is also cheapest, still mark it
     cheapest.badges.push('cheapest');
   }
 
   // Fastest = shortest duration
-  const fastest = flights.reduce((min, f) => f.total_duration < min.total_duration ? f : min, flights[0]);
+  const fastest = items.reduce((min, f) => {
+    const minDur = min.totalDuration ?? min.total_duration ?? 0;
+    const curDur = f.totalDuration ?? f.total_duration ?? 0;
+    return curDur < minDur ? f : min;
+  }, items[0]);
+  
   if (!fastest.badges.includes('best_overall')) {
-    fastest.badges.push('fastest');
-  } else {
     fastest.badges.push('fastest');
   }
 }
 
 /**
- * Generate a recommendation with reasoning text.
+ * Pair and score combined itineraries
  */
-export function generateRecommendation(flights: RankedFlight[]): Recommendation | null {
-  if (flights.length === 0) return null;
+export function rankPairedItineraries(outbounds: RankedFlight[], returns: RankedFlight[]): PairedItinerary[] {
+  if (outbounds.length === 0 || returns.length === 0) return [];
 
-  const best = flights[0]; // Already sorted by score
-  const reason = buildReasonText(best, flights);
+  // Generate naive permutations of the best options to keep counts reasonable (max ~25)
+  const topOut = outbounds.slice(0, 5);
+  const topRet = returns.slice(0, 5);
+  
+  const paired: Omit<PairedItinerary, 'score'|'priceScore'|'durationScore'|'stopsScore'|'badges'>[] = [];
+  
+  for (const outbound of topOut) {
+    for (const returnFlight of topRet) {
+      paired.push({
+        id: `pair-${outbound.id}-${returnFlight.id}`,
+        outbound,
+        returnFlight,
+        combinedPrice: outbound.price + returnFlight.price,
+        totalDuration: outbound.total_duration + returnFlight.total_duration,
+      });
+    }
+  }
+
+  const prices = paired.map(p => p.combinedPrice);
+  const durations = paired.map(p => p.totalDuration);
+  const outboundStops = paired.map(p => p.outbound.stops); // Penalize complex outbounds more
+
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const minDuration = Math.min(...durations);
+  const maxDuration = Math.max(...durations);
+  const minStops = Math.min(...outboundStops);
+  const maxStops = Math.max(...outboundStops);
+
+  const scoredPairs: PairedItinerary[] = paired.map(pair => {
+    const priceScore = normalizeInverse(pair.combinedPrice, minPrice, maxPrice);
+    const durationScore = normalizeInverse(pair.totalDuration, minDuration, maxDuration);
+    const stopsScore = normalizeInverse(pair.outbound.stops, minStops, maxStops);
+
+    const score = Math.round(
+      priceScore * WEIGHT_PRICE +
+      durationScore * WEIGHT_DURATION +
+      stopsScore * WEIGHT_STOPS
+    );
+
+    return {
+      ...pair,
+      score,
+      priceScore,
+      durationScore,
+      stopsScore,
+      badges: [],
+    };
+  });
+
+  scoredPairs.sort((a, b) => b.score - a.score);
+
+  // We assign badges on the mapping object so the util function can read `.price` and `.totalDuration`
+  const wrappedItems = scoredPairs.map(p => ({
+    ...p,
+    price: p.combinedPrice,
+    totalDuration: p.totalDuration,
+    badges: p.badges
+  }));
+  assignBadges(wrappedItems);
+
+  // Re-sync badges back
+  wrappedItems.forEach((w, i) => {
+    scoredPairs[i].badges = w.badges;
+  });
+
+  return scoredPairs;
+}
+
+
+/**
+ * Generate a recommendation.
+ */
+export function generateRecommendation(items: RankedFlight[] | PairedItinerary[], isPaired: boolean = false): Recommendation | null {
+  if (items.length === 0) return null;
+
+  const best = items[0]; // Already sorted by score
+  const reason = isPaired 
+    ? buildPairedReasonText(best as PairedItinerary, items as PairedItinerary[])
+    : buildReasonText(best as RankedFlight, items as RankedFlight[]);
 
   return {
-    flight: best,
+    item: best,
     reason,
+    isPaired
   };
 }
 
-/**
- * Build human-readable reason text explaining why a flight is recommended.
- */
 function buildReasonText(flight: RankedFlight, allFlights: RankedFlight[]): string {
   const badges = flight.badges;
   const avgPrice = allFlights.reduce((sum, f) => sum + f.price, 0) / allFlights.length;
   const avgDuration = allFlights.reduce((sum, f) => sum + f.total_duration, 0) / allFlights.length;
 
-  // If it has all three badges
   if (badges.includes('cheapest') && badges.includes('fastest')) {
     return 'This flight is both the cheapest and fastest option available — a clear winner.';
   }
 
-  // If it's the cheapest
   if (badges.includes('cheapest')) {
     return `The most affordable option at $${flight.price}, with a reasonable travel time of ${formatDuration(flight.total_duration)}.`;
   }
 
-  // If it's the fastest
   if (badges.includes('fastest')) {
     return `The quickest route at ${formatDuration(flight.total_duration)}, at a competitive price point.`;
   }
 
-  // General "best overall" reasoning
   const priceDiff = Math.round(((avgPrice - flight.price) / avgPrice) * 100);
   const durationDiff = Math.round(((avgDuration - flight.total_duration) / avgDuration) * 100);
 
@@ -161,7 +232,27 @@ function buildReasonText(flight: RankedFlight, allFlights: RankedFlight[]): stri
   return 'Best overall combination of price, travel time, and number of stops across all available options.';
 }
 
-function formatDuration(minutes: number): string {
+function buildPairedReasonText(pair: PairedItinerary, allPairs: PairedItinerary[]): string {
+  const badges = pair.badges;
+  const avgPrice = allPairs.reduce((sum, p) => sum + p.combinedPrice, 0) / allPairs.length;
+  
+  if (badges.includes('cheapest')) {
+    return `The lowest combined fare at $${pair.combinedPrice}, using your desired city as a layover to save money.`;
+  }
+  
+  if (badges.includes('fastest')) {
+    return `Gets you to your layover and back home faster than any other option, minimizing wasted transit time.`;
+  }
+  
+  const priceDiff = Math.round(((avgPrice - pair.combinedPrice) / avgPrice) * 100);
+  if (priceDiff > 5) {
+    return `This option uses your desired city as the layover, keeps the combined outbound and return fare low (${priceDiff}% cheaper than average), and avoids excessive extra travel time.`;
+  }
+  
+  return 'The smartest balance of a round-trip disguised as two one-way tickets, optimizing for layover access and total price.';
+}
+
+export function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}h ${mins}m`;

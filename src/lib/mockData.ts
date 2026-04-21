@@ -290,3 +290,105 @@ export function generateMockFlights(
 
   return flights;
 }
+
+/**
+ * Generate mock flights where the intended destination is actually a layover.
+ */
+export function generateMockLayoverFlights(
+  origin: string,
+  intendedDestination: string,
+  departureDate: string,
+): FlightOption[] {
+  const from = origin.toUpperCase();
+  const hub = intendedDestination.toUpperCase();
+  const seed = `${from}-${hub}-${departureDate}-layover`;
+  const rng = seededRandom(seed);
+
+  const flights: FlightOption[] = [];
+  const numFlights = 3 + Math.floor(rng() * 4); // 3 to 6
+
+  for (let i = 0; i < numFlights; i++) {
+    const airline1 = AIRLINES[Math.floor(rng() * AIRLINES.length)];
+    const airline2 = rng() > 0.6 ? airline1 : AIRLINES[Math.floor(rng() * AIRLINES.length)];
+
+    // Pick a final ticketed destination that isn't origin or hub
+    const availableDestinations = Object.keys(AIRPORTS).filter(k => k !== from && k !== hub);
+    const finalDest = availableDestinations[Math.floor(rng() * availableDestinations.length)];
+
+    const leg1Duration = 60 + Math.floor(rng() * 180);
+    const layoverDuration = 45 + Math.floor(rng() * 300); // 45m - 5h
+    const leg2Duration = 60 + Math.floor(rng() * 240);
+    const totalDuration = leg1Duration + layoverDuration + leg2Duration;
+
+    // Layover/Hidden-city flights are often cheap
+    const price = 89 + Math.floor(rng() * 250);
+
+    const departHour = 5 + Math.floor(rng() * 15);
+    const departMin = Math.floor(rng() * 4) * 15;
+
+    const leg1ArrMinutes = departHour * 60 + departMin + leg1Duration;
+    const leg2DepMinutes = leg1ArrMinutes + layoverDuration;
+    const leg2ArrMinutes = leg2DepMinutes + leg2Duration;
+
+    flights.push({
+      id: `mock-layover-${i}`,
+      flights: [
+        {
+          departure_airport: {
+            name: getAirportName(from),
+            id: from,
+            time: `${departureDate} ${String(departHour).padStart(2, '0')}:${String(departMin).padStart(2, '0')}`,
+          },
+          arrival_airport: {
+            name: getAirportName(hub),
+            id: hub,
+            time: `${departureDate} ${String(Math.floor(leg1ArrMinutes / 60) % 24).padStart(2, '0')}:${String(leg1ArrMinutes % 60).padStart(2, '0')}`,
+          },
+          duration: leg1Duration,
+          airplane: 'Boeing 737',
+          airline: airline1.name,
+          airline_logo: airline1.logo,
+          flight_number: `${airline1.code} ${1000 + Math.floor(rng() * 9000)}`,
+        },
+        {
+          departure_airport: {
+            name: getAirportName(hub),
+            id: hub,
+            time: `${departureDate} ${String(Math.floor(leg2DepMinutes / 60) % 24).padStart(2, '0')}:${String(leg2DepMinutes % 60).padStart(2, '0')}`,
+          },
+          arrival_airport: {
+            name: getAirportName(finalDest),
+            id: finalDest,
+            time: `${departureDate} ${String(Math.floor(leg2ArrMinutes / 60) % 24).padStart(2, '0')}:${String(leg2ArrMinutes % 60).padStart(2, '0')}`,
+          },
+          duration: leg2Duration,
+          airplane: 'Airbus A321',
+          airline: airline2.name,
+          airline_logo: airline2.logo,
+          flight_number: `${airline2.code} ${1000 + Math.floor(rng() * 9000)}`,
+        },
+      ],
+      layovers: [
+        {
+          duration: layoverDuration,
+          name: getAirportName(hub),
+          id: hub,
+          overnight: layoverDuration > 360,
+        },
+      ],
+      total_duration: totalDuration,
+      price,
+      type: 'connecting',
+      airline_logo: airline1.logo,
+      stops: 1,
+      isLayoverMatch: true,
+      ticketedDestination: {
+        id: finalDest,
+        name: getAirportName(finalDest)
+      }
+    });
+  }
+
+  flights.sort((a, b) => a.price - b.price);
+  return flights;
+}

@@ -1,10 +1,13 @@
 // Flight search and result types for FindaFlight
 
+export type SearchMode = 'standard' | 'layover';
+
 export interface FlightSearchParams {
   origin: string;
   destination: string;
   departureDate: string;
   returnDate?: string;
+  mode?: SearchMode;
 }
 
 export interface FlightLeg {
@@ -47,6 +50,13 @@ export interface FlightOption {
     difference_percent: number;
   };
   departure_token?: string;
+  
+  // Hidden-city specific optional fields
+  isLayoverMatch?: boolean;
+  ticketedDestination?: {
+    id: string;
+    name: string;
+  };
 }
 
 // Ranking badge types
@@ -60,13 +70,29 @@ export interface RankedFlight extends FlightOption {
   badges: FlightBadge[];
 }
 
+export interface PairedItinerary {
+  id: string;
+  outbound: RankedFlight;
+  returnFlight: RankedFlight;
+  combinedPrice: number;
+  totalDuration: number;
+  score: number;
+  priceScore: number;
+  durationScore: number;
+  stopsScore: number;
+  badges: FlightBadge[];
+}
+
 export interface Recommendation {
-  flight: RankedFlight;
-  reason: string; // e.g., "Best balance of price and duration"
+  item: RankedFlight | PairedItinerary;
+  reason: string;
+  isPaired: boolean;
 }
 
 export interface SearchResults {
-  flights: RankedFlight[];
+  mode: SearchMode;
+  flights?: RankedFlight[];           // defined if mode === 'standard'
+  pairedItineraries?: PairedItinerary[]; // defined if mode === 'layover'
   recommendation: Recommendation | null;
   searchParams: FlightSearchParams;
   isMockData: boolean;
