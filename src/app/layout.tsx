@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mango-bush-0cf642c0f.5.azurestaticapps.net"),
+  metadataBase: new URL("https://findaflight.site"),
   title: "FindaFlight — Discover the Best Flight for You",
   description:
     "FindaFlight is an intelligent flight discovery platform that helps you find the best flight based on price, duration, and convenience — not just the cheapest.",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "FindaFlight — Discover the Best Flight for You",
     description: "An intelligent flight discovery platform. Search standard routes, uncover layover destinations, or let us surprise you with Take Me Anywhere.",
-    url: "https://mango-bush-0cf642c0f.5.azurestaticapps.net",
+    url: "https://findaflight.site",
     siteName: "FindaFlight",
     images: [
       {
