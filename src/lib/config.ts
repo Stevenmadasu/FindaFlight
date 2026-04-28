@@ -13,6 +13,8 @@ export function getServerConfig(): Config {
   const serpApiKey = process.env.SERPAPI_KEY || '';
   const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true' || !serpApiKey;
 
+  console.log(`[FindaFlight] Config loaded | API key: ${serpApiKey ? 'present' : 'missing'} | Mock mode: ${useMockData}`);
+
   return {
     serpApiKey,
     useMockData,

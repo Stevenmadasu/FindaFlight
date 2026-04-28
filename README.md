@@ -6,14 +6,36 @@ FindaFlight scores every flight option using a weighted algorithm (price, durati
 
 ---
 
-## Features
+## Sprint 2 Features
 
-- **Smart Ranking** — Every flight scored 0-100 using weighted factors (40% price, 35% duration, 25% stops)
-- **Clear Labels** — "Best Overall ⭐", "Cheapest 💰", "Fastest ⚡" badges on results
-- **Top Recommendation** — Highlighted pick with plain-language reasoning
-- **Sort & Filter** — Sort by Best, Price, Duration, or Stops
-- **Mock Data Fallback** — Works immediately without any API keys
-- **Responsive Design** — Clean, modern UI that works on all devices
+### Three Search Modes
+
+- **Standard Search** — Search for flights with smart scoring. When a return date is provided, outbound and return flights are paired into round-trip options with combined pricing and a "Best round-trip value" recommendation.
+- **Layover Destination Search** — Find hidden-city flights where your intended destination is the intermediate layover. Paired automatically with a return one-way ticket.
+- **Take Me Anywhere** — Discovery mode: enter your origin and dates, and FindaFlight explores multiple destinations to show you the best deals. Each destination card shows price, duration, stops, weekend score, and a personalized recommendation.
+
+### Rubric Compliance (Sprint 2)
+
+- **Cookie Consent Popup** — Appears on first visit, links to Cookie Policy, uses localStorage persistence
+- **Policy Pages** — `/cookie-policy`, `/privacy-policy`, `/terms` — all linked from footer
+- **Favicon** — Custom travel-themed SVG favicon
+- **Social Media Meta Tags** — Open Graph and Twitter card tags with preview image
+- **Campaign URL** — Google Analytics UTM parameters displayed in footer
+- **Portfolio Section** — Developer bio with Resume, LinkedIn, and GitHub links on the About page
+
+### Smart Ranking
+
+- Every flight scored 0-100 using weighted factors (40% price, 35% duration, 25% stops)
+- Clear labels: "Best Overall ⭐", "Cheapest 💰", "Fastest ⚡"
+- Round-trip recommendations: "This round-trip is the best balance of price and total travel time"
+- Sort & filter by Best, Price, Duration, or Stops
+
+### Polished UI
+
+- Improved empty states with actionable suggestions
+- Mobile responsive design
+- Smooth animations and glassmorphism effects
+- WCAG 2.1 AA accessible with semantic HTML
 
 ---
 
@@ -68,41 +90,77 @@ NEXT_PUBLIC_USE_MOCK_DATA=true
 
 ---
 
+## API & Mock Fallback
+
+FindaFlight uses a layered data strategy:
+
+1. **Live API** — When `SERPAPI_KEY` is set and `NEXT_PUBLIC_USE_MOCK_DATA` is `false`, real Google Flights data is fetched via SerpAPI
+2. **Mock Fallback** — If the API fails or no key is provided, deterministic mock data is generated based on route and date
+3. **Hybrid Mode** — For layover searches, outbound flights are always mocked (to ensure layover matches exist), while return flights can use live data
+
+All API calls happen **server-side only** — keys are never exposed to the client browser. The UI shows a data source indicator so you always know if you're seeing live or demo data.
+
+---
+
+## Pages & Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Home — Flight search with 3 modes |
+| `/about` | About FindaFlight + Developer portfolio |
+| `/cookie-policy` | Cookie policy |
+| `/privacy-policy` | Privacy policy |
+| `/terms` | Terms of service |
+
+---
+
 ## Project Structure
 
 ```
 findaflight/
 ├── src/
 │   ├── app/
-│   │   ├── api/search/route.ts      # Flight search API (SerpAPI + mock fallback)
-│   │   ├── about/page.tsx           # About page
-│   │   ├── globals.css              # Global styles & design tokens
-│   │   ├── layout.tsx               # Root layout with nav + footer
-│   │   └── page.tsx                 # Landing page with search
+│   │   ├── api/search/route.ts        # Flight search API (3 modes)
+│   │   ├── about/page.tsx             # About page + portfolio
+│   │   ├── cookie-policy/page.tsx     # Cookie policy
+│   │   ├── privacy-policy/page.tsx    # Privacy policy
+│   │   ├── terms/page.tsx             # Terms of service
+│   │   ├── globals.css                # Global styles & design tokens
+│   │   ├── layout.tsx                 # Root layout (meta, nav, footer, cookies)
+│   │   └── page.tsx                   # Landing page with search
 │   ├── components/
-│   │   ├── FlightCard.tsx           # Individual flight display card
-│   │   ├── FlightResults.tsx        # Results list with sort/filter
-│   │   ├── Navbar.tsx               # Navigation bar
-│   │   ├── RecommendationCard.tsx   # Top recommendation highlight
-│   │   └── SearchForm.tsx           # Flight search form
+│   │   ├── AirportInput.tsx           # Airport autocomplete input
+│   │   ├── CookieConsent.tsx          # Cookie consent banner
+│   │   ├── DestinationCard.tsx        # Take Me Anywhere destination card
+│   │   ├── FlightCard.tsx             # Individual flight display
+│   │   ├── FlightResults.tsx          # Results list with sort/filter
+│   │   ├── Navbar.tsx                 # Navigation bar
+│   │   ├── PairedFlightCard.tsx       # Layover paired itinerary card
+│   │   ├── RecommendationCard.tsx     # Top recommendation highlight
+│   │   ├── RoundTripCard.tsx          # Standard round-trip card
+│   │   └── SearchForm.tsx             # Flight search form (3 modes)
 │   ├── lib/
-│   │   ├── config.ts               # Environment configuration
-│   │   ├── mockData.ts             # Mock flight data generator
-│   │   ├── scoring.ts              # Smart ranking algorithm
-│   │   └── serpapi.ts              # SerpAPI client
+│   │   ├── airports.ts               # Airport database & search
+│   │   ├── config.ts                  # Environment configuration
+│   │   ├── mockData.ts               # Mock data generator (incl. anywhere)
+│   │   ├── scoring.ts                # Smart ranking + destination cards
+│   │   └── serpapi.ts                # SerpAPI client
 │   └── types/
-│       └── flight.ts               # TypeScript type definitions
-├── .env.local                       # Environment variables
-├── next.config.ts                   # Next.js configuration
-├── package.json                     # Dependencies & scripts
-└── tsconfig.json                    # TypeScript configuration
+│       └── flight.ts                 # TypeScript type definitions
+├── public/
+│   ├── favicon.svg                    # Travel-themed favicon
+│   └── og-preview.png               # Social media preview image
+├── .env.local                         # Environment variables
+├── next.config.ts                     # Next.js configuration
+├── package.json                       # Dependencies & scripts
+└── tsconfig.json                      # TypeScript configuration
 ```
 
 ---
 
 ## How to Deploy to Azure
 
-### Option 1: Azure Static Web Apps
+### Azure Static Web Apps
 
 1. Push this repo to GitHub
 2. In Azure Portal → Create Static Web App
@@ -113,22 +171,7 @@ findaflight/
    - **Output location:** `.next`
 5. Add environment variables in Azure Portal → Configuration
 
-### Option 2: Azure App Service
-
-1. Build the production bundle:
-   ```bash
-   npm run build
-   ```
-2. Create an Azure App Service (Node.js 18+)
-3. Deploy using the Azure CLI:
-   ```bash
-   az webapp up --name findaflight --runtime "NODE:18-lts"
-   ```
-4. Set environment variables:
-   ```bash
-   az webapp config appsettings set --name findaflight \
-     --settings SERPAPI_KEY=your_key NEXT_PUBLIC_USE_MOCK_DATA=false
-   ```
+The app auto-deploys on every push to `main` via GitHub Actions.
 
 ---
 

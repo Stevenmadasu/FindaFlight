@@ -4,7 +4,9 @@ import { useState, useMemo } from 'react';
 import { SearchResults, RankedFlight, PairedItinerary } from '@/types/flight';
 import FlightCard from './FlightCard';
 import PairedFlightCard from './PairedFlightCard';
+import RoundTripCard from './RoundTripCard';
 import RecommendationCard from './RecommendationCard';
+import DestinationCard from './DestinationCard';
 
 interface FlightResultsProps {
   results: SearchResults;
@@ -19,7 +21,49 @@ export default function FlightResults({ results }: FlightResultsProps) {
   const [showFilters, setShowFilters] = useState(false);
 
   const isLayoverMode = results.mode === 'layover';
-  const flightsArray = isLayoverMode 
+  const isAnywhereMode = results.mode === 'anywhere';
+  const isStandardRoundTrip = results.mode === 'standard' && (results.pairedItineraries?.length ?? 0) > 0;
+  const isStandardOneWay = results.mode === 'standard' && !isStandardRoundTrip;
+
+  // === ANYWHERE MODE ===
+  if (isAnywhereMode) {
+    const destinations = results.destinations || [];
+
+    if (destinations.length === 0) {
+      return <EmptyState />;
+    }
+
+    return (
+      <div className="mt-8 animate-fade-in">
+        {/* Summary */}
+        <div className="glass rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              {destinations.length} Destinations Discovered
+            </h2>
+            <p className="text-sm text-gray-400">
+              From {results.searchParams.origin} · {results.searchParams.departureDate} → {results.searchParams.returnDate}
+            </p>
+          </div>
+          {results.isMockData && (
+            <span className="text-xs px-3 py-1 bg-amber-500/[0.1] border border-amber-500/20 rounded-lg text-amber-300/80">
+              Demo data
+            </span>
+          )}
+        </div>
+
+        {/* Destination Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {destinations.map((card, index) => (
+            <DestinationCard key={card.destinationCode} card={card} index={index} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // === STANDARD / LAYOVER MODES ===
+  const flightsArray = isLayoverMode || isStandardRoundTrip
     ? (results.pairedItineraries || []) as Array<RankedFlight | PairedItinerary>
     : (results.flights || []) as Array<RankedFlight | PairedItinerary>;
 
@@ -35,6 +79,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
     if (flightsArray.length === 0) return { min: 0, max: 0 };
     const prices = flightsArray.map(f => getPrice(f));
     return { min: Math.min(...prices), max: Math.max(...prices) };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flightsArray]);
 
   // Filter and sort
@@ -62,6 +107,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
       default:
         return list;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flightsArray, sortBy, maxStops, maxPrice]);
 
   const totalFlights = flightsArray.length;
@@ -80,6 +126,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
   const availableStops = useMemo(() => {
     const stops = [...new Set(flightsArray.map(f => getStops(f)))].sort();
     return stops;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flightsArray]);
 
   const activeFilterCount = (maxStops !== null ? 1 : 0) + (maxPrice !== null ? 1 : 0);
@@ -90,15 +137,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
   };
 
   if (totalFlights === 0) {
-    return (
-      <div className="mt-10 text-center animate-fade-in">
-        <div className="glass-strong rounded-2xl p-10 max-w-lg mx-auto">
-          <svg className="w-16 h-16 mx-auto mb-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          <h3 className="text-xl font-bold text-white mb-3">No flights found</h3>
-          <p className="text-gray-400 mb-6">We couldn&apos;t find any flights for this route.</p>
-        </div>
-      </div>
-    );
+    return <EmptyState />;
   }
 
   const fastestDur = fastest ? getDuration(fastest) : 0;
@@ -109,7 +148,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="glass rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">
-            {isLayoverMode ? 'Layover Matches' : 'Flights Found'}
+            {isLayoverMode ? 'Layover Matches' : isStandardRoundTrip ? 'Round-Trips' : 'Flights Found'}
           </p>
           <p className="text-2xl font-bold text-white mt-1">{totalFlights}</p>
         </div>
@@ -134,8 +173,8 @@ export default function FlightResults({ results }: FlightResultsProps) {
         <div className="mb-5 flex items-center gap-2 px-4 py-2.5 bg-amber-500/[0.08] border border-amber-500/20 rounded-xl text-sm">
           <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <span className="text-amber-300/80">
-            {isLayoverMode 
-              ? 'Layover match search runs via a hybrid synthesized engine to provide real-time demonstration speeds.' 
+            {results.dataSource === 'hybrid'
+              ? 'Showing hybrid results: outbound uses mock data, return uses live API data.'
               : 'Showing simulated results for demonstration. Real-time data available with API integration.'}
           </span>
         </div>
@@ -150,7 +189,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-white">
-            {filteredFlights.length === totalFlights ? 'All Iterations' : `${filteredFlights.length} of ${totalFlights} Iterations`}
+            {filteredFlights.length === totalFlights ? 'All Options' : `${filteredFlights.length} of ${totalFlights}`}
             <span className="text-gray-500 font-normal text-sm ml-2">
               {results.searchParams.origin} → {isLayoverMode ? 'Layover at ' : ''}{results.searchParams.destination}
             </span>
@@ -210,7 +249,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                 Max Stops
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {[
                   { value: null, label: 'Any' },
                   ...availableStops.map(s => ({ value: s, label: s === 0 ? 'Direct' : `${s} stop${s > 1 ? 's' : ''}` })),
@@ -266,7 +305,10 @@ export default function FlightResults({ results }: FlightResultsProps) {
         {filteredFlights.length > 0 ? (
           filteredFlights.map((item, index) => {
             if (isPaired(item)) {
-              return <PairedFlightCard key={item.id} paired={item} />;
+              if (isLayoverMode) {
+                return <PairedFlightCard key={item.id} paired={item} />;
+              }
+              return <RoundTripCard key={item.id} paired={item} index={index} />;
             } else {
               return <FlightCard key={item.id} flight={item} index={index} />;
             }
@@ -279,6 +321,63 @@ export default function FlightResults({ results }: FlightResultsProps) {
             </button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Polished empty state component */
+function EmptyState() {
+  return (
+    <div className="mt-10 text-center animate-fade-in">
+      <div className="glass-strong rounded-2xl p-10 max-w-lg mx-auto">
+        <div className="w-16 h-16 mx-auto mb-5 bg-gradient-to-br from-gray-700/30 to-gray-600/20 rounded-2xl flex items-center justify-center">
+          <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">No strong options found</h3>
+        <p className="text-gray-400 mb-6 text-sm leading-relaxed">
+          We couldn&apos;t find flights that meet your criteria. Here are some suggestions:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+          <div className="flex items-start gap-2 bg-white/[0.04] rounded-lg p-3">
+            <svg className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <div>
+              <p className="text-xs font-semibold text-white">Clear filters</p>
+              <p className="text-[10px] text-gray-500">Remove stop or price limits</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 bg-white/[0.04] rounded-lg p-3">
+            <svg className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-xs font-semibold text-white">Increase budget</p>
+              <p className="text-[10px] text-gray-500">Higher max price = more options</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 bg-white/[0.04] rounded-lg p-3">
+            <svg className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <div>
+              <p className="text-xs font-semibold text-white">Try flexible dates</p>
+              <p className="text-[10px] text-gray-500">±1-2 days can unlock better fares</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 bg-white/[0.04] rounded-lg p-3">
+            <svg className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            <div>
+              <p className="text-xs font-semibold text-white">Allow stops</p>
+              <p className="text-[10px] text-gray-500">Connecting flights are often cheaper</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

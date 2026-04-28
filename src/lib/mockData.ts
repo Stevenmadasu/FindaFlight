@@ -63,6 +63,26 @@ const AIRPORTS: Record<string, string> = {
 // Hub connections for layovers
 const HUB_AIRPORTS = ['ATL', 'ORD', 'DFW', 'DEN', 'JFK', 'LAX', 'CLT', 'MIA', 'IAH', 'MSP', 'DTW', 'SLC', 'PHX'];
 
+// Popular destinations for "Take Me Anywhere"
+const ANYWHERE_DESTINATIONS: Record<string, string> = {
+  'MIA': 'Miami',
+  'LAX': 'Los Angeles',
+  'LAS': 'Las Vegas',
+  'MCO': 'Orlando',
+  'SFO': 'San Francisco',
+  'SEA': 'Seattle',
+  'DEN': 'Denver',
+  'BNA': 'Nashville',
+  'AUS': 'Austin',
+  'SAN': 'San Diego',
+  'BOS': 'Boston',
+  'JFK': 'New York',
+  'PHX': 'Phoenix',
+  'TPA': 'Tampa',
+  'PDX': 'Portland',
+  'HNL': 'Honolulu',
+};
+
 function getAirportName(code: string): string {
   return AIRPORTS[code.toUpperCase()] || `${code.toUpperCase()} Airport`;
 }
@@ -391,4 +411,76 @@ export function generateMockLayoverFlights(
 
   flights.sort((a, b) => a.price - b.price);
   return flights;
+}
+
+/**
+ * Generate "Take Me Anywhere" mock flights from origin to multiple random destinations.
+ * Returns a map of destination code → FlightOption[]
+ */
+export function generateAnywhereFlights(
+  origin: string,
+  departureDate: string,
+  returnDate: string,
+  maxPrice?: number,
+): { outbound: Record<string, FlightOption[]>; returns: Record<string, FlightOption[]> } {
+  const from = origin.toUpperCase();
+  const seed = `${from}-anywhere-${departureDate}`;
+  const rng = seededRandom(seed);
+
+  // Pick 8-12 destinations, excluding origin
+  const allDests = Object.keys(ANYWHERE_DESTINATIONS).filter(d => d !== from);
+  const shuffled = allDests.sort(() => rng() - 0.5);
+  const selectedDests = shuffled.slice(0, 8 + Math.floor(rng() * 4));
+
+  const outbound: Record<string, FlightOption[]> = {};
+  const returns: Record<string, FlightOption[]> = {};
+
+  for (const dest of selectedDests) {
+    const outFlights = generateMockFlights(from, dest, departureDate);
+    const retFlights = generateMockFlights(dest, from, returnDate);
+
+    // Apply max price filter if set
+    if (maxPrice) {
+      const filtered = outFlights.filter(f => f.price <= maxPrice);
+      outbound[dest] = filtered.length > 0 ? filtered : outFlights.slice(0, 2); // keep at least 2
+    } else {
+      outbound[dest] = outFlights;
+    }
+
+    returns[dest] = retFlights;
+  }
+
+  return { outbound, returns };
+}
+
+/**
+ * Compute a "weekend score" for a trip.
+ * Higher score = better for weekend trips (depart Fri/Sat, return Sun/Mon).
+ */
+export function computeWeekendScore(departureDate: string, returnDate: string): number {
+  const dep = new Date(departureDate + 'T12:00:00');
+  const ret = new Date(returnDate + 'T12:00:00');
+  const depDay = dep.getDay(); // 0=Sun, 5=Fri, 6=Sat
+  const retDay = ret.getDay();
+
+  let score = 0;
+
+  // Departure: Friday(5) or Saturday(6) is ideal
+  if (depDay === 5) score += 40;
+  else if (depDay === 6) score += 35;
+  else if (depDay === 4) score += 20; // Thursday
+  else score += 5;
+
+  // Return: Sunday(0) or Monday(1) is ideal
+  if (retDay === 0) score += 40;
+  else if (retDay === 1) score += 35;
+  else if (retDay === 2) score += 15; // Tuesday
+  else score += 5;
+
+  // Trip length: 2-4 days is ideal for a weekend
+  const diffDays = Math.round((ret.getTime() - dep.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays >= 2 && diffDays <= 4) score += 20;
+  else if (diffDays >= 1 && diffDays <= 6) score += 10;
+
+  return Math.min(100, score);
 }

@@ -9,7 +9,8 @@
  * Lower price / duration / stops → higher score.
  */
 
-import { FlightOption, RankedFlight, FlightBadge, Recommendation, PairedItinerary } from '@/types/flight';
+import { FlightOption, RankedFlight, FlightBadge, Recommendation, PairedItinerary, DestinationCard } from '@/types/flight';
+import { computeWeekendScore } from './mockData';
 
 // Scoring weights
 const WEIGHT_PRICE = 0.40;
@@ -106,7 +107,7 @@ function assignBadges(items: { price: number; totalDuration?: number; total_dura
 /**
  * Pair and score combined itineraries
  */
-export function rankPairedItineraries(outbounds: RankedFlight[], returns: RankedFlight[]): PairedItinerary[] {
+export function rankPairedItineraries(outbounds: RankedFlight[], returns: RankedFlight[], label?: string): PairedItinerary[] {
   if (outbounds.length === 0 || returns.length === 0) return [];
 
   // Generate naive permutations of the best options to keep counts reasonable (max ~25)
@@ -123,6 +124,7 @@ export function rankPairedItineraries(outbounds: RankedFlight[], returns: Ranked
         returnFlight,
         combinedPrice: outbound.price + returnFlight.price,
         totalDuration: outbound.total_duration + returnFlight.total_duration,
+        label,
       });
     }
   }
@@ -160,6 +162,13 @@ export function rankPairedItineraries(outbounds: RankedFlight[], returns: Ranked
   });
 
   scoredPairs.sort((a, b) => b.score - a.score);
+
+  // Assign labels: best gets "Best round-trip value", others get "Round-trip option"
+  scoredPairs.forEach((pair, idx) => {
+    if (!pair.label) {
+      pair.label = idx === 0 ? 'Best round-trip value' : 'Round-trip option';
+    }
+  });
 
   // We assign badges on the mapping object so the util function can read `.price` and `.totalDuration`
   const wrappedItems = scoredPairs.map(p => ({
@@ -236,6 +245,27 @@ function buildPairedReasonText(pair: PairedItinerary, allPairs: PairedItinerary[
   const badges = pair.badges;
   const avgPrice = allPairs.reduce((sum, p) => sum + p.combinedPrice, 0) / allPairs.length;
   
+  // Check if this is a round-trip (standard mode) vs layover match
+  const isRoundTrip = !pair.outbound.isLayoverMatch;
+  
+  if (isRoundTrip) {
+    if (badges.includes('cheapest') && badges.includes('fastest')) {
+      return 'This round-trip is the best balance of price and total travel time — both the cheapest and fastest combination available.';
+    }
+    if (badges.includes('cheapest')) {
+      return `This round-trip is the best balance of price and total travel time. At $${pair.combinedPrice} combined, it offers the most affordable pairing.`;
+    }
+    if (badges.includes('fastest')) {
+      return `This round-trip is the best balance of price and total travel time — the fastest combination at ${formatDuration(pair.totalDuration)} total.`;
+    }
+    const priceDiff = Math.round(((avgPrice - pair.combinedPrice) / avgPrice) * 100);
+    if (priceDiff > 5) {
+      return `This round-trip is the best balance of price and total travel time — ${priceDiff}% cheaper than the average pairing.`;
+    }
+    return 'This round-trip is the best balance of price and total travel time across all available combinations.';
+  }
+  
+  // Layover match text
   if (badges.includes('cheapest')) {
     return `The lowest combined fare at $${pair.combinedPrice}, using your desired city as a layover to save money.`;
   }
@@ -250,6 +280,104 @@ function buildPairedReasonText(pair: PairedItinerary, allPairs: PairedItinerary[
   }
   
   return 'The smartest balance of a round-trip disguised as two one-way tickets, optimizing for layover access and total price.';
+}
+
+/**
+ * Build destination cards for "Take Me Anywhere" mode.
+ */
+export function buildDestinationCards(
+  outboundsByDest: Record<string, RankedFlight[]>,
+  returnsByDest: Record<string, RankedFlight[]>,
+  departureDate: string,
+  returnDate: string,
+  preference: string = 'best',
+): DestinationCard[] {
+  const CITY_NAMES: Record<string, string> = {
+    'MIA': 'Miami', 'LAX': 'Los Angeles', 'LAS': 'Las Vegas', 'MCO': 'Orlando',
+    'SFO': 'San Francisco', 'SEA': 'Seattle', 'DEN': 'Denver', 'BNA': 'Nashville',
+    'AUS': 'Austin', 'SAN': 'San Diego', 'BOS': 'Boston', 'JFK': 'New York',
+    'PHX': 'Phoenix', 'TPA': 'Tampa', 'PDX': 'Portland', 'HNL': 'Honolulu',
+    'ATL': 'Atlanta', 'ORD': 'Chicago', 'DFW': 'Dallas', 'MSP': 'Minneapolis',
+    'DTW': 'Detroit', 'CLT': 'Charlotte', 'IAH': 'Houston', 'SLC': 'Salt Lake City',
+  };
+
+  const cards: DestinationCard[] = [];
+
+  for (const [destCode, outFlights] of Object.entries(outboundsByDest)) {
+    if (outFlights.length === 0) continue;
+    const retFlights = returnsByDest[destCode] || [];
+
+    const bestOutbound = outFlights[0]; // already sorted by score
+    const cheapestOutbound = outFlights.reduce((min, f) => f.price < min.price ? f : min, outFlights[0]);
+    const fastestOutbound = outFlights.reduce((min, f) => f.total_duration < min.total_duration ? f : min, outFlights[0]);
+
+    const weekendScore = computeWeekendScore(departureDate, returnDate);
+
+    // Best round-trip price
+    const cheapestReturn = retFlights.length > 0
+      ? retFlights.reduce((min, f) => f.price < min.price ? f : min, retFlights[0])
+      : null;
+    const bestRoundTripPrice = cheapestOutbound.price + (cheapestReturn?.price || 0);
+
+    // Build recommendation reason
+    let reason = '';
+    const isShortFlight = bestOutbound.total_duration <= 180;
+    const isCheap = bestOutbound.price <= 200;
+    const isDirect = bestOutbound.stops === 0;
+
+    if (isCheap && isDirect && isShortFlight) {
+      reason = 'Great value: direct flight, low cost, and short travel time.';
+    } else if (isCheap && isDirect) {
+      reason = 'Affordable direct flight — no connections needed.';
+    } else if (isCheap && isShortFlight) {
+      reason = 'Budget-friendly with a quick journey.';
+    } else if (isDirect) {
+      reason = 'Convenient direct flight from your airport.';
+    } else if (isCheap) {
+      reason = 'Great price point for this destination.';
+    } else if (weekendScore >= 60) {
+      reason = `Great weekend trip: good timing with a weekend score of ${weekendScore}/100.`;
+    } else {
+      reason = 'Solid option with a good balance of price and convenience.';
+    }
+
+    // Score the destination card
+    let score: number;
+    if (preference === 'cheapest') {
+      score = Math.round(100 - (cheapestOutbound.price / 5)); // Cheaper = higher score
+    } else if (preference === 'fastest') {
+      score = Math.round(100 - (fastestOutbound.total_duration / 6)); // Faster = higher
+    } else {
+      score = bestOutbound.score; // Use the flight scoring engine
+    }
+    score = Math.max(0, Math.min(100, score));
+
+    cards.push({
+      destinationCity: CITY_NAMES[destCode] || destCode,
+      destinationCode: destCode,
+      bestPrice: cheapestOutbound.price,
+      bestAirline: bestOutbound.flights[0]?.airline || 'Multiple Airlines',
+      bestDuration: fastestOutbound.total_duration,
+      bestStops: bestOutbound.stops,
+      score,
+      weekendScore,
+      recommendationReason: reason,
+      flights: outFlights,
+      returnFlights: retFlights,
+      bestRoundTripPrice,
+    });
+  }
+
+  // Sort by preference
+  if (preference === 'cheapest') {
+    cards.sort((a, b) => a.bestPrice - b.bestPrice);
+  } else if (preference === 'fastest') {
+    cards.sort((a, b) => a.bestDuration - b.bestDuration);
+  } else {
+    cards.sort((a, b) => b.score - a.score);
+  }
+
+  return cards;
 }
 
 export function formatDuration(minutes: number): string {

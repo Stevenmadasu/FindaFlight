@@ -1,6 +1,8 @@
 // Flight search and result types for FindaFlight
 
-export type SearchMode = 'standard' | 'layover';
+export type SearchMode = 'standard' | 'layover' | 'anywhere';
+
+export type SearchPreference = 'cheapest' | 'fastest' | 'best';
 
 export interface FlightSearchParams {
   origin: string;
@@ -8,6 +10,8 @@ export interface FlightSearchParams {
   departureDate: string;
   returnDate?: string;
   mode?: SearchMode;
+  preference?: SearchPreference;
+  maxPrice?: number;
 }
 
 export interface FlightLeg {
@@ -81,6 +85,7 @@ export interface PairedItinerary {
   durationScore: number;
   stopsScore: number;
   badges: FlightBadge[];
+  label?: string; // "Round-trip option" or "Best round-trip value"
 }
 
 export interface Recommendation {
@@ -89,13 +94,31 @@ export interface Recommendation {
   isPaired: boolean;
 }
 
+// Take Me Anywhere types
+export interface DestinationCard {
+  destinationCity: string;
+  destinationCode: string;
+  bestPrice: number;
+  bestAirline: string;
+  bestDuration: number; // minutes
+  bestStops: number;
+  score: number;
+  weekendScore: number; // 0-100, how well does it work for a weekend trip
+  recommendationReason: string;
+  flights: RankedFlight[]; // all flight options to this destination
+  returnFlights: RankedFlight[]; // return options
+  bestRoundTripPrice: number;
+}
+
 export interface SearchResults {
   mode: SearchMode;
-  flights?: RankedFlight[];           // defined if mode === 'standard'
-  pairedItineraries?: PairedItinerary[]; // defined if mode === 'layover'
+  flights?: RankedFlight[];           // defined if mode === 'standard' (one-way)
+  pairedItineraries?: PairedItinerary[]; // defined if mode === 'layover' OR standard round-trip
+  destinations?: DestinationCard[];    // defined if mode === 'anywhere'
   recommendation: Recommendation | null;
   searchParams: FlightSearchParams;
   isMockData: boolean;
+  dataSource?: string; // 'api' | 'mock' | 'hybrid'
 }
 
 // SerpAPI response shape
