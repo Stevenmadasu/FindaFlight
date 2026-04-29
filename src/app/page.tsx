@@ -4,6 +4,7 @@ import { useState } from 'react';
 import SearchForm from '@/components/SearchForm';
 import FlightResults from '@/components/FlightResults';
 import { SearchResults, SearchMode, SearchPreference } from '@/types/flight';
+import { searchFlightsClient } from '@/lib/searchClient';
 
 export default function HomePage() {
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -24,18 +25,8 @@ export default function HomePage() {
     setResults(null);
 
     try {
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Search failed');
-      }
-
+      // Use client-side search (Azure SWA free tier doesn't support server-side API routes)
+      const data = await searchFlightsClient(params);
       setResults(data);
 
       setTimeout(() => {
@@ -47,6 +38,7 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen hero-pattern">
