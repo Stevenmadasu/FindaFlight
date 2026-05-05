@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import CookieConsent from "@/components/CookieConsent";
 import Link from "next/link";
+import "@/lib/firebase"; // Initialize Firebase
 
 const inter = Inter({
   subsets: ["latin"],

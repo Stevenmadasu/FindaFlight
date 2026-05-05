@@ -1,67 +1,55 @@
-# FindaFlight
+# ✈️ FindAFlight
 
-An intelligent flight discovery platform that helps you find the **best** flight — not just the cheapest.
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Deployment](https://img.shields.io/badge/Deployed%20on-Azure-0089D6?style=for-the-badge&logo=microsoft-azure)](https://findaflight.site)
 
-FindaFlight scores every flight option using a weighted algorithm (price, duration, stops) and gives you clear recommendations with explanations, so you can make a confident travel decision.
-
----
-
-## Sprint 2 Features
-
-### Three Search Modes
-
-- **Standard Search** — Search for flights with smart scoring. When a return date is provided, outbound and return flights are paired into round-trip options with combined pricing and a "Best round-trip value" recommendation.
-- **Layover Destination Search** — Find hidden-city flights where your intended destination is the intermediate layover. Paired automatically with a return one-way ticket.
-- **Take Me Anywhere** — Discovery mode: enter your origin and dates, and FindaFlight explores multiple destinations to show you the best deals. Each destination card shows price, duration, stops, weekend score, and a personalized recommendation.
-
-### Rubric Compliance (Sprint 2)
-
-- **Cookie Consent Popup** — Appears on first visit, links to Cookie Policy, uses localStorage persistence
-- **Policy Pages** — `/cookie-policy`, `/privacy-policy`, `/terms` — all linked from footer
-- **Favicon** — Custom travel-themed SVG favicon
-- **Social Media Meta Tags** — Open Graph and Twitter card tags with preview image
-- **Campaign URL** — Google Analytics UTM parameters displayed in footer
-- **Portfolio Section** — Developer bio with Resume, LinkedIn, and GitHub links on the About page
-
-### Smart Ranking
-
-- Every flight scored 0-100 using weighted factors (40% price, 35% duration, 25% stops)
-- Clear labels: "Best Overall ⭐", "Cheapest 💰", "Fastest ⚡"
-- Round-trip recommendations: "This round-trip is the best balance of price and total travel time"
-- Sort & filter by Best, Price, Duration, or Stops
-
-### Polished UI
-
-- Improved empty states with actionable suggestions
-- Mobile responsive design
-- Smooth animations and glassmorphism effects
-- WCAG 2.1 AA accessible with semantic HTML
+An intelligent flight discovery platform that helps you find the **best** flight — not just the cheapest. FindAFlight scores every flight option using a weighted algorithm (price, duration, stops) and gives you clear recommendations with explanations, so you can make a confident travel decision.
 
 ---
 
-## Getting Started
+## 🌟 Sprint 2 Highlights
+
+### 🔍 Three Intelligent Search Modes
+- **Standard Search** — Smart scoring for one-way and round-trip flights. Outbound and return flights are automatically paired to maximize value.
+- **Layover Destination Search** — Our signature "Hidden-City" engine. It finds flights where your destination is actually a layover, saving you up to 40% on airfare.
+- **Take Me Anywhere** — Pure discovery mode. Enter your origin and dates, and we'll show you the best deals across the globe with personalized rankings.
+
+### 📋 Rubric Compliance (Sprint 2)
+- [x] **Cookie Consent** — Persistent glassmorphism popup with localStorage.
+- [x] **Policy Framework** — Dedicated routes for Cookie, Privacy, and Terms.
+- [x] **Brand Assets** — Custom travel-themed SVG favicon and metadata.
+- [x] **Analytics** — Fully integrated Firebase tracking with conversion funnels.
+- [x] **SEO & Social** — Open Graph / Twitter meta tags with custom preview.
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-
-- Node.js 18+
-- npm
+- **Node.js** 18.17 or later
+- **npm** or **yarn**
 
 ### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/stevenmadasu/findaflight.git
+   cd findaflight
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm install
-```
-
-### Run locally
-
+### Running Locally
+Start the development server:
 ```bash
 npm run dev
 ```
+Visit [http://localhost:3000](http://localhost:3000) to see the app in action!
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Build for production
-
+### Production Build
 ```bash
 npm run build
 npm start
@@ -69,116 +57,55 @@ npm start
 
 ---
 
-## Environment Variables
+## ⚙️ Configuration
 
-Create a `.env.local` file in the project root:
+Create a `.env.local` file in the root directory to manage your keys:
 
 ```env
-# SerpApi (optional — app uses mock data if this is missing)
+# SerpApi (optional — app uses realistic mock data if missing)
 SERPAPI_KEY=your_serpapi_key_here
 
-# Set to 'true' to always use mock data
+# Force Mock Data (useful for testing)
 NEXT_PUBLIC_USE_MOCK_DATA=true
-```
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SERPAPI_KEY` | No | SerpApi key for real Google Flights data |
-| `NEXT_PUBLIC_USE_MOCK_DATA` | No | Set to `true` to use mock data even with API key |
-
-> **Note:** The app works fully without any API keys using realistic mock data.
-
----
-
-## API & Mock Fallback
-
-FindaFlight uses a layered data strategy:
-
-1. **Live API** — When `SERPAPI_KEY` is set and `NEXT_PUBLIC_USE_MOCK_DATA` is `false`, real Google Flights data is fetched via SerpAPI
-2. **Mock Fallback** — If the API fails or no key is provided, deterministic mock data is generated based on route and date
-3. **Hybrid Mode** — For layover searches, outbound flights are always mocked (to ensure layover matches exist), while return flights can use live data
-
-All API calls happen **server-side only** — keys are never exposed to the client browser. The UI shows a data source indicator so you always know if you're seeing live or demo data.
-
----
-
-## Pages & Routes
-
-| Route | Description |
-|-------|-------------|
-| `/` | Home — Flight search with 3 modes |
-| `/about` | About FindaFlight + Developer portfolio |
-| `/cookie-policy` | Cookie policy |
-| `/privacy-policy` | Privacy policy |
-| `/terms` | Terms of service |
-
----
-
-## Project Structure
-
-```
-findaflight/
-├── src/
-│   ├── app/
-│   │   ├── api/search/route.ts        # Flight search API (3 modes)
-│   │   ├── about/page.tsx             # About page + portfolio
-│   │   ├── cookie-policy/page.tsx     # Cookie policy
-│   │   ├── privacy-policy/page.tsx    # Privacy policy
-│   │   ├── terms/page.tsx             # Terms of service
-│   │   ├── globals.css                # Global styles & design tokens
-│   │   ├── layout.tsx                 # Root layout (meta, nav, footer, cookies)
-│   │   └── page.tsx                   # Landing page with search
-│   ├── components/
-│   │   ├── AirportInput.tsx           # Airport autocomplete input
-│   │   ├── CookieConsent.tsx          # Cookie consent banner
-│   │   ├── DestinationCard.tsx        # Take Me Anywhere destination card
-│   │   ├── FlightCard.tsx             # Individual flight display
-│   │   ├── FlightResults.tsx          # Results list with sort/filter
-│   │   ├── Navbar.tsx                 # Navigation bar
-│   │   ├── PairedFlightCard.tsx       # Layover paired itinerary card
-│   │   ├── RecommendationCard.tsx     # Top recommendation highlight
-│   │   ├── RoundTripCard.tsx          # Standard round-trip card
-│   │   └── SearchForm.tsx             # Flight search form (3 modes)
-│   ├── lib/
-│   │   ├── airports.ts               # Airport database & search
-│   │   ├── config.ts                  # Environment configuration
-│   │   ├── mockData.ts               # Mock data generator (incl. anywhere)
-│   │   ├── scoring.ts                # Smart ranking + destination cards
-│   │   └── serpapi.ts                # SerpAPI client
-│   └── types/
-│       └── flight.ts                 # TypeScript type definitions
-├── public/
-│   ├── favicon.svg                    # Travel-themed favicon
-│   └── og-preview.png               # Social media preview image
-├── .env.local                         # Environment variables
-├── next.config.ts                     # Next.js configuration
-├── package.json                       # Dependencies & scripts
-└── tsconfig.json                      # TypeScript configuration
+# Firebase Analytics
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
 ```
 
 ---
 
-## How to Deploy to Azure
+## 🛠️ Tech Stack & Architecture
 
-### Azure Static Web Apps
+| Layer | Technology |
+|-------|------------|
+| **Framework** | Next.js 15 (App Router) |
+| **Language** | TypeScript |
+| **Styling** | Vanilla CSS + Tailwind 4 Utility |
+| **Analytics** | Firebase / GA4 |
+| **Hosting** | Azure Static Web Apps |
+| **CI/CD** | GitHub Actions |
 
-1. Push this repo to GitHub
-2. In Azure Portal → Create Static Web App
-3. Connect your GitHub repository
-4. Build settings:
-   - **App location:** `/`
-   - **API location:** (leave blank, Next.js handles it)
-   - **Output location:** `.next`
-5. Add environment variables in Azure Portal → Configuration
-
-The app auto-deploys on every push to `main` via GitHub Actions.
+### Folder Structure
+- `src/app/` — App Router pages and global styles.
+- `src/components/` — Modular, reusable UI components (Glassmorphism design).
+- `src/lib/` — Business logic: Smart Ranking, Mock Data, and API clients.
+- `src/types/` — Shared TypeScript interfaces for data safety.
 
 ---
 
-## Tech Stack
+## 📈 Smart Ranking Algorithm
+Every flight is scored from **0-100** using a balanced weight system:
+- **40% Price**: Lower fares get higher scores.
+- **35% Duration**: Efficiency matters.
+- **25% Stops**: Minimizing friction for the traveler.
 
-- **Framework:** Next.js 16 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS 4
-- **Font:** Inter (Google Fonts)
-- **API:** SerpAPI (Google Flights) with mock data fallback
+---
+
+## 🌐 Deployment
+This project is automatically deployed to **Azure Static Web Apps** on every push to the `main` branch.
+
+**Live Site:** [findaflight.site](https://findaflight.site)
+
+---
+© 2025 FindAFlight Team. Built for BAIS 3300.
