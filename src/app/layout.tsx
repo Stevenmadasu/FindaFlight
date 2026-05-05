@@ -4,7 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import CookieConsent from "@/components/CookieConsent";
 import Link from "next/link";
-import "@/lib/firebase"; // Initialize Firebase
+import FirebaseAnalytics from "@/components/FirebaseAnalytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -129,6 +129,9 @@ export default function RootLayout({
 
         {/* Cookie Consent Banner */}
         <CookieConsent />
+
+        {/* Firebase Analytics (renders nothing, just initializes tracking) */}
+        <FirebaseAnalytics />
       </body>
     </html>
   );
