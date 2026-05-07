@@ -111,7 +111,10 @@ function handleApiError(error: unknown): NextResponse {
 
   if (message.includes('SERPAPI_API_KEY')) {
     return NextResponse.json(
-      { error: 'Flight search service is not configured.', code: 'MISSING_API_KEY' } as ApiErrorResponse,
+      { 
+        error: 'SerpApi key is missing. Please set the SERPAPI_API_KEY environment variable in your Azure Static Web App settings.', 
+        code: 'MISSING_API_KEY' 
+      } as ApiErrorResponse,
       { status: 500 },
     );
   }

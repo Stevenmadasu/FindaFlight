@@ -38,8 +38,7 @@ export async function GET(request: NextRequest) {
   try {
     const apiKey = getApiKey();
     const url = new URL(SERPAPI_BASE_URL);
-    url.searchParams.set('engine', 'google_flights');
-    url.searchParams.set('type', '8'); // autocomplete type
+    url.searchParams.set('engine', 'google_flights_autocomplete');
     url.searchParams.set('q', query);
     url.searchParams.set('gl', gl);
     url.searchParams.set('hl', hl);
