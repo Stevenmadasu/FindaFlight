@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { ref, set, get, push, remove, onValue, off, type DatabaseReference } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from './useAuth';
-import { FlightOption, FlightSearchParams, PairedItinerary } from '@/types/flight';
+import { FlightOption, FlightSearchParams, PairedItinerary, RankedFlight } from '@/types/flight';
 
 /**
  * useDatabase — Hook for interacting with Firebase Realtime Database.
@@ -18,7 +18,7 @@ export function useDatabase() {
   /**
    * Save a flight to the user's saved flights list.
    */
-  const saveFlight = useCallback(async (flight: FlightOption) => {
+  const saveFlight = useCallback(async (flight: FlightOption | RankedFlight) => {
     if (!isAuthenticated || !user) return;
     setLoading(true);
     try {
@@ -135,7 +135,7 @@ export function useDatabase() {
    * Get the user's saved flights.
    * Returns a list of FlightOption objects.
    */
-  const getSavedFlights = useCallback(async (): Promise<FlightOption[]> => {
+  const getSavedFlights = useCallback(async (): Promise<RankedFlight[]> => {
     if (!isAuthenticated || !user) return [];
     setLoading(true);
     try {
@@ -143,7 +143,7 @@ export function useDatabase() {
       const snapshot = await get(flightsRef);
       if (snapshot.exists()) {
         const data = snapshot.val();
-        return Object.values(data);
+        return Object.values(data) as RankedFlight[];
       }
       return [];
     } catch (err) {
@@ -165,7 +165,7 @@ export function useDatabase() {
       const snapshot = await get(tripsRef);
       if (snapshot.exists()) {
         const data = snapshot.val();
-        return Object.values(data);
+        return Object.values(data) as PairedItinerary[];
       }
       return [];
     } catch (err) {

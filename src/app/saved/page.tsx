@@ -6,14 +6,14 @@ import { useDatabase } from '@/hooks/useDatabase';
 import FlightCard from '@/components/FlightCard';
 import RoundTripCard from '@/components/RoundTripCard';
 import PairedFlightCard from '@/components/PairedFlightCard';
-import { FlightOption, PairedItinerary } from '@/types/flight';
+import { FlightOption, PairedItinerary, RankedFlight } from '@/types/flight';
 import Link from 'next/link';
 
 export default function SavedPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { getSavedFlights, getSavedPairedItineraries, getSearchHistory } = useDatabase();
   
-  const [flights, setFlights] = useState<FlightOption[]>([]);
+  const [flights, setFlights] = useState<RankedFlight[]>([]);
   const [pairedTrips, setPairedTrips] = useState<PairedItinerary[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
