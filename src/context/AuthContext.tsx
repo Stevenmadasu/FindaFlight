@@ -10,7 +10,8 @@ import {
   GoogleAuthProvider,
   type User,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, database } from '@/lib/firebase';
+import { ref, set, serverTimestamp } from 'firebase/database';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -39,21 +40,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Synchronize user profile with Realtime Database.
+   */
+  const syncUserProfile = useCallback(async (firebaseUser: User) => {
+    try {
+      const userRef = ref(database, `users/${firebaseUser.uid}/profile`);
+      await set(userRef, {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        lastLogin: serverTimestamp(),
+      });
+      console.log(`[Auth] Profile synced for ${firebaseUser.email} ✓`);
+    } catch (err) {
+      console.error('[Auth] Failed to sync profile:', err);
+    }
+  }, []);
+
   // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      if (firebaseUser) {
+        syncUserProfile(firebaseUser);
+      }
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [syncUserProfile]);
 
   const clearError = useCallback(() => setError(null), []);
 
   const signInWithGoogle = useCallback(async () => {
     try {
       setError(null);
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result.user) {
+        await syncUserProfile(result.user);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Google sign-in failed';
       // Don't show error for user-cancelled popups
@@ -61,12 +87,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(message);
       }
     }
-  }, []);
+  }, [syncUserProfile]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      if (result.user) {
+        await syncUserProfile(result.user);
+      }
     } catch (err) {
       const code = (err as { code?: string })?.code;
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
@@ -77,12 +106,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(err instanceof Error ? err.message : 'Sign-in failed');
       }
     }
-  }, []);
+  }, [syncUserProfile]);
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
-      await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      if (result.user) {
+        await syncUserProfile(result.user);
+      }
     } catch (err) {
       const code = (err as { code?: string })?.code;
       if (code === 'auth/email-already-in-use') {
@@ -95,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(err instanceof Error ? err.message : 'Sign-up failed');
       }
     }
-  }, []);
+  }, [syncUserProfile]);
 
   const signOut = useCallback(async () => {
     try {

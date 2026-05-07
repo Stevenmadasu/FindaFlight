@@ -3,6 +3,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 import { getAuth, type Auth } from "firebase/auth";
+import { getDatabase, type Database } from "firebase/database";
 
 // Firebase client config — these are public identifiers, not secrets.
 // They are restricted by Firebase Security Rules, not by secrecy.
@@ -23,6 +24,9 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 // Initialize Auth
 const auth: Auth = getAuth(app);
 
+// Initialize Realtime Database
+const database: Database = getDatabase(app);
+
 // Initialize Analytics lazily (client-side only)
 let analytics: Analytics | null = null;
 
@@ -35,4 +39,4 @@ if (typeof window !== "undefined") {
   });
 }
 
-export { app, auth, analytics };
+export { app, auth, database, analytics };

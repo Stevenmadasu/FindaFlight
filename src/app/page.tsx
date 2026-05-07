@@ -7,6 +7,7 @@ import AuthGate from '@/components/AuthGate';
 import { SearchResults, SearchMode, SearchPreference } from '@/types/flight';
 import { searchFlightsClient } from '@/lib/searchClient';
 import { useAuth } from '@/hooks/useAuth';
+import { useDatabase } from '@/hooks/useDatabase';
 
 export default function HomePage() {
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -18,6 +19,7 @@ export default function HomePage() {
   const [searchMode, setSearchMode] = useState<SearchMode>('standard');
   
   const { user } = useAuth();
+  const { logSearch } = useDatabase();
   const isAuthenticated = !!user;
 
   const handleModeChange = (newMode: SearchMode) => {
@@ -76,6 +78,11 @@ export default function HomePage() {
       
       clearTimeout(timeoutId);
       setResults(data);
+
+      // Log search for authenticated users
+      if (isAuthenticated) {
+        logSearch(params);
+      }
 
       // Cache results
       sessionStorage.setItem(cacheKey, JSON.stringify({

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { PairedItinerary } from '@/types/flight';
-import FlightCard from './FlightCard';
+import { useAuth } from '@/hooks/useAuth';
+import { useDatabase } from '@/hooks/useDatabase';
+import AuthGate from './AuthGate';
 
 interface PairedFlightCardProps {
   paired: PairedItinerary;
@@ -10,97 +10,153 @@ interface PairedFlightCardProps {
 
 export default function PairedFlightCard({ paired }: PairedFlightCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [isAuthGateOpen, setIsAuthGateOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const { isAuthenticated } = useAuth();
+  const { savePairedItinerary, removePairedItinerary, isPairedItinerarySaved } = useDatabase();
 
   const { outbound, returnFlight, combinedPrice, score } = paired;
+  const pairedId = `${outbound.id}_${returnFlight.id}`;
+
+  // Check if trip is saved
+  useState(() => {
+    if (isAuthenticated) {
+      isPairedItinerarySaved(pairedId).then(setIsSaved);
+    }
+  });
 
   // Skiplagged style savings estimation (just a visual indicator)
   const savingsEstimate = Math.round(combinedPrice * 0.4); 
 
   const handleBooking = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Open both tickets or a combined search. 
-    // For now, we'll open a Google Flights search for the destination.
     const url = `https://www.google.com/flights?hl=en#flt=${outbound.flights[0]?.departure_airport.id}.${returnFlight.flights[0]?.departure_airport.id}.${outbound.flights[0]?.departure_airport.time.split(' ')[0]}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  return (
-    <div className={`bg-[#0f172a]/80 backdrop-blur-xl border transition-all duration-500 rounded-3xl overflow-hidden group relative ${
-      expanded ? 'border-teal-500/40 ring-1 ring-teal-500/20' : 'border-white/[0.05] hover:border-teal-500/20'
-    }`}>
-      
-      {/* Savings Badge */}
-      <div className="absolute top-0 right-12 px-4 py-1.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-b-xl z-10 shadow-lg shadow-teal-500/20">
-        SAVINGS: ${savingsEstimate}+
-      </div>
+  const handleToggleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      setIsAuthGateOpen(true);
+      return;
+    }
 
-      {/* Paired Header Summary */}
-      <div 
-        className="p-6 md:p-8 cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-8"
-        onClick={() => setExpanded(!expanded)}
-        role="button"
-        aria-expanded={expanded}
-      >
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="px-3 py-1 bg-teal-500/10 text-teal-400 text-[10px] font-black rounded-lg border border-teal-500/20 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
-              LAYOVER MATCH
-            </span>
-            <span className="text-gray-500 text-[10px] font-black border border-white/[0.05] bg-white/[0.03] px-2.5 py-1 rounded-lg uppercase tracking-widest">
-              DEAL SCORE: {score}
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <h3 className="text-white text-3xl font-black tracking-tighter flex items-center gap-3">
-              {outbound.flights[0]?.departure_airport.id}
-              <div className="flex flex-col items-center">
-                <svg className="w-5 h-5 text-teal-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-                <svg className="w-5 h-5 -mt-2 text-indigo-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
+    if (isSaved) {
+      await removePairedItinerary(pairedId);
+      setIsSaved(false);
+    } else {
+      await savePairedItinerary(paired);
+      setIsSaved(true);
+    }
+  };
+
+  return (
+    <>
+      <AuthGate 
+        isOpen={isAuthGateOpen} 
+        onClose={() => setIsAuthGateOpen(false)} 
+        onSuccess={() => {
+          setIsAuthGateOpen(false);
+          savePairedItinerary(paired).then(() => setIsSaved(true));
+        }}
+      />
+      <div className={`bg-[#0f172a]/80 backdrop-blur-xl border transition-all duration-500 rounded-3xl overflow-hidden group relative ${
+        expanded ? 'border-teal-500/40 ring-1 ring-teal-500/20' : 'border-white/[0.05] hover:border-teal-500/20'
+      }`}>
+        
+        {/* Savings Badge */}
+        <div className="absolute top-0 right-12 px-4 py-1.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-b-xl z-10 shadow-lg shadow-teal-500/20">
+          SAVINGS: ${savingsEstimate}+
+        </div>
+
+        {/* Paired Header Summary */}
+        <div 
+          className="p-6 md:p-8 cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-8"
+          onClick={() => setExpanded(!expanded)}
+          role="button"
+          aria-expanded={expanded}
+        >
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="px-3 py-1 bg-teal-500/10 text-teal-400 text-[10px] font-black rounded-lg border border-teal-500/20 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+                LAYOVER MATCH
+              </span>
+              <span className="text-gray-500 text-[10px] font-black border border-white/[0.05] bg-white/[0.03] px-2.5 py-1 rounded-lg uppercase tracking-widest">
+                DEAL SCORE: {score}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <h3 className="text-white text-3xl font-black tracking-tighter flex items-center gap-3">
+                {outbound.flights[0]?.departure_airport.id}
+                <div className="flex flex-col items-center">
+                  <svg className="w-5 h-5 text-teal-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                  <svg className="w-5 h-5 -mt-2 text-indigo-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </div>
+                {returnFlight.flights[0]?.departure_airport.id}
+              </h3>
+            </div>
+            
+            <div className="mt-4 flex items-center gap-3">
+              <div className="glass px-3 py-1 rounded-full border border-teal-500/20">
+                <p className="text-[10px] text-teal-400 font-black uppercase tracking-widest">
+                  Exit at {returnFlight.flights[0]?.departure_airport.id} Layover
+                </p>
               </div>
-              {returnFlight.flights[0]?.departure_airport.id}
-            </h3>
-          </div>
-          
-          <div className="mt-4 flex items-center gap-3">
-            <div className="glass px-3 py-1 rounded-full border border-teal-500/20">
-              <p className="text-[10px] text-teal-400 font-black uppercase tracking-widest">
-                Exit at {returnFlight.flights[0]?.departure_airport.id} Layover
+              <p className="text-xs text-gray-500 font-bold italic">
+                Layover efficiency detected
               </p>
             </div>
-            <p className="text-xs text-gray-500 font-bold italic">
-              Layover efficiency detected
-            </p>
           </div>
-        </div>
 
-        <div className="flex items-center gap-8 lg:gap-12">
-          <div className="text-right">
-            <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Total Trip Price</p>
-            <p className="text-5xl font-black text-white leading-none tracking-tighter">${combinedPrice.toLocaleString()}</p>
-            <div className="mt-2 flex items-center justify-end gap-2">
-              <span className="w-2 h-2 rounded-full bg-teal-500/40"></span>
-              <p className="text-[10px] text-teal-500/80 font-black uppercase tracking-widest">Save {Math.round((savingsEstimate / (combinedPrice + savingsEstimate)) * 100)}% vs Standard</p>
+          <div className="flex items-center gap-8 lg:gap-12">
+            {/* Save Button */}
+            <button
+              onClick={handleToggleSave}
+              className={`p-3 rounded-2xl transition-all duration-300 ${
+                isSaved 
+                  ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' 
+                  : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+              aria-label={isSaved ? "Remove from saved" : "Save trip"}
+            >
+              <svg 
+                className="w-6 h-6" 
+                fill={isSaved ? "currentColor" : "none"} 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+
+            <div className="text-right">
+              <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Total Trip Price</p>
+              <p className="text-5xl font-black text-white leading-none tracking-tighter">${combinedPrice.toLocaleString()}</p>
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <span className="w-2 h-2 rounded-full bg-teal-500/40"></span>
+                <p className="text-[10px] text-teal-500/80 font-black uppercase tracking-widest">Save {Math.round((savingsEstimate / (combinedPrice + savingsEstimate)) * 100)}% vs Standard</p>
+              </div>
+            </div>
+            
+            <div className={`h-16 w-16 flex-shrink-0 flex items-center justify-center rounded-2xl transition-all duration-500 ${
+              expanded ? 'bg-teal-500 text-black shadow-lg shadow-teal-500/30' : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 group-hover:border-teal-500/30'
+            }`}>
+              <svg 
+                className={`w-8 h-8 transition-transform duration-500 ${expanded ? 'rotate-180' : ''}`} 
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
           </div>
-          
-          <div className={`h-16 w-16 flex-shrink-0 flex items-center justify-center rounded-2xl transition-all duration-500 ${
-            expanded ? 'bg-teal-500 text-black shadow-lg shadow-teal-500/30' : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 group-hover:border-teal-500/30'
-          }`}>
-            <svg 
-              className={`w-8 h-8 transition-transform duration-500 ${expanded ? 'rotate-180' : ''}`} 
-              fill="none" viewBox="0 0 24 24" stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
         </div>
-      </div>
 
       {/* Expanded Details */}
       <div 

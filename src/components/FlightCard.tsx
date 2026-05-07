@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { RankedFlight, FlightBadge } from '@/types/flight';
+import { useAuth } from '@/hooks/useAuth';
+import { useDatabase } from '@/hooks/useDatabase';
+import AuthGate from './AuthGate';
 
 interface FlightCardProps {
   flight: RankedFlight;
@@ -35,6 +36,19 @@ function getBadgeConfig(badge: FlightBadge): { label: string; icon: string; clas
 
 export default function FlightCard({ flight, index }: FlightCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [isAuthGateOpen, setIsAuthGateOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  
+  const { isAuthenticated } = useAuth();
+  const { saveFlight, removeFlight, isFlightSaved } = useDatabase();
+
+  // Check if flight is saved on mount/auth change
+  useState(() => {
+    if (isAuthenticated) {
+      isFlightSaved(flight.id).then(setIsSaved);
+    }
+  });
+
   const legs = flight.flights || [];
   const firstLeg = legs[0];
   const lastLeg = legs[legs.length - 1];
@@ -43,132 +57,177 @@ export default function FlightCard({ flight, index }: FlightCardProps) {
 
   const handleBooking = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // In a real app, this would be a dynamic URL. 
-    // For now, we'll use a generic Google Flights search URL or the one from metadata if available.
     const url = `https://www.google.com/flights?hl=en#flt=${firstLeg.departure_airport.id}.${lastLeg.arrival_airport.id}.${firstLeg.departure_airport.time.split(' ')[0]}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const handleToggleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      setIsAuthGateOpen(true);
+      return;
+    }
+
+    if (isSaved) {
+      await removeFlight(flight.id);
+      setIsSaved(false);
+    } else {
+      await saveFlight(flight);
+      setIsSaved(true);
+    }
+  };
+
   return (
-    <div
-      className={`glass rounded-xl transition-all duration-300 group animate-slide-up cursor-pointer overflow-hidden ${
-        expanded ? 'bg-white/[0.06] ring-1 ring-indigo-500/20' : 'hover:bg-white/[0.06]'
-      }`}
-      style={{ animationDelay, animationFillMode: 'backwards' }}
-      onClick={() => setExpanded(!expanded)}
-      role="button"
-      aria-expanded={expanded}
-      aria-label={`Flight from ${firstLeg?.departure_airport?.id} to ${lastLeg?.arrival_airport?.id} for $${flight.price}`}
-    >
-      {/* Main Row */}
-      <div className="p-4 md:p-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Airline Info */}
-          <div className="flex items-center gap-3 md:w-44">
-            {flight.airline_logo ? (
-              <img
-                src={flight.airline_logo}
-                alt={firstLeg?.airline || 'Airline'}
-                className="w-10 h-10 rounded-lg object-contain bg-white/90 p-1"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </div>
-            )}
-            <div>
-              <p className="text-white font-bold text-sm">{firstLeg?.airline || 'Airline'}</p>
-              <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
-                {legs.map(leg => leg.flight_number).filter(Boolean).join(', ')}
-              </p>
-            </div>
-          </div>
-
-          {/* Route & Times */}
-          <div className="flex-1 mx-0 md:mx-4">
-            <div className="flex items-center justify-between">
-              {/* Departure */}
-              <div className="text-center min-w-[70px]">
-                <p className="text-xl font-black text-white">
-                  {firstLeg?.departure_airport?.time ? formatTime(firstLeg.departure_airport.time) : '--:--'}
+    <>
+      <AuthGate 
+        isOpen={isAuthGateOpen} 
+        onClose={() => setIsAuthGateOpen(false)} 
+        onSuccess={() => {
+          setIsAuthGateOpen(false);
+          saveFlight(flight).then(() => setIsSaved(true));
+        }}
+      />
+      <div
+        className={`glass rounded-xl transition-all duration-300 group animate-slide-up cursor-pointer overflow-hidden ${
+          expanded ? 'bg-white/[0.06] ring-1 ring-indigo-500/20' : 'hover:bg-white/[0.06]'
+        }`}
+        style={{ animationDelay, animationFillMode: 'backwards' }}
+        onClick={() => setExpanded(!expanded)}
+        role="button"
+        aria-expanded={expanded}
+        aria-label={`Flight from ${firstLeg?.departure_airport?.id} to ${lastLeg?.arrival_airport?.id} for $${flight.price}`}
+      >
+        {/* Main Row */}
+        <div className="p-4 md:p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Airline Info */}
+            <div className="flex items-center gap-3 md:w-44">
+              {flight.airline_logo ? (
+                <img
+                  src={flight.airline_logo}
+                  alt={firstLeg?.airline || 'Airline'}
+                  className="w-10 h-10 rounded-lg object-contain bg-white/90 p-1"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </div>
+              )}
+              <div>
+                <p className="text-white font-bold text-sm">{firstLeg?.airline || 'Airline'}</p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+                  {legs.map(leg => leg.flight_number).filter(Boolean).join(', ')}
                 </p>
-                <p className="text-xs font-bold text-gray-500 mt-0.5 tracking-widest">{firstLeg?.departure_airport?.id || '---'}</p>
               </div>
+            </div>
 
-              {/* Duration & Stops */}
-              <div className="flex-1 px-3 md:px-6">
-                <div className="relative flex items-center">
-                  <div className="flex-1 border-t-2 border-dashed border-white/[0.08] group-hover:border-indigo-500/30 transition-colors"></div>
-                  <div className="absolute left-1/2 transform -translate-x-1/2 bg-transparent px-2">
-                    <div className="glass px-2 py-0.5 rounded-md border border-white/[0.05]">
-                      <p className="text-[10px] text-gray-400 whitespace-nowrap font-bold uppercase tracking-tighter">
-                        {formatDuration(flight.total_duration)}
+            {/* Route & Times */}
+            <div className="flex-1 mx-0 md:mx-4">
+              <div className="flex items-center justify-between">
+                {/* Departure */}
+                <div className="text-center min-w-[70px]">
+                  <p className="text-xl font-black text-white">
+                    {firstLeg?.departure_airport?.time ? formatTime(firstLeg.departure_airport.time) : '--:--'}
+                  </p>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5 tracking-widest">{firstLeg?.departure_airport?.id || '---'}</p>
+                </div>
+
+                {/* Duration & Stops */}
+                <div className="flex-1 px-3 md:px-6">
+                  <div className="relative flex items-center">
+                    <div className="flex-1 border-t-2 border-dashed border-white/[0.08] group-hover:border-indigo-500/30 transition-colors"></div>
+                    <div className="absolute left-1/2 transform -translate-x-1/2 bg-transparent px-2">
+                      <div className="glass px-2 py-0.5 rounded-md border border-white/[0.05]">
+                        <p className="text-[10px] text-gray-400 whitespace-nowrap font-bold uppercase tracking-tighter">
+                          {formatDuration(flight.total_duration)}
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-center font-bold mt-1 tracking-wider uppercase">
+                        {flight.stops === 0 ? (
+                          <span className="text-teal-400">NON-STOP</span>
+                        ) : (
+                          <span className="text-gray-500">{flight.stops} STOP{flight.stops > 1 ? 'S' : ''}</span>
+                        )}
                       </p>
                     </div>
-                    <p className="text-[10px] text-center font-bold mt-1 tracking-wider uppercase">
-                      {flight.stops === 0 ? (
-                        <span className="text-teal-400">NON-STOP</span>
-                      ) : (
-                        <span className="text-gray-500">{flight.stops} STOP{flight.stops > 1 ? 'S' : ''}</span>
-                      )}
-                    </p>
                   </div>
+                </div>
+
+                {/* Arrival */}
+                <div className="text-center min-w-[70px]">
+                  <p className="text-xl font-black text-white">
+                    {lastLeg?.arrival_airport?.time ? formatTime(lastLeg.arrival_airport.time) : '--:--'}
+                  </p>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5 tracking-widest">{lastLeg?.arrival_airport?.id || '---'}</p>
                 </div>
               </div>
 
-              {/* Arrival */}
-              <div className="text-center min-w-[70px]">
-                <p className="text-xl font-black text-white">
-                  {lastLeg?.arrival_airport?.time ? formatTime(lastLeg.arrival_airport.time) : '--:--'}
-                </p>
-                <p className="text-xs font-bold text-gray-500 mt-0.5 tracking-widest">{lastLeg?.arrival_airport?.id || '---'}</p>
-              </div>
-            </div>
-
-            {/* Layover Info (summary) */}
-            {!expanded && flight.layovers && flight.layovers.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
-                {flight.layovers.map((layover, idx) => (
-                  <span
-                    key={idx}
-                    className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500/80 border border-amber-500/20"
-                  >
-                    {formatDuration(layover.duration)} in {layover.id}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Price & Badges */}
-          <div className="flex items-center gap-4 md:flex-col md:items-end md:gap-2">
-            <div className="text-right">
-              <p className="text-2xl font-black text-white tracking-tight">
-                ${flight.price?.toLocaleString() || 'N/A'}
-              </p>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">one-way</p>
-            </div>
-
-            {flight.badges.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 justify-end">
-                {flight.badges.map((badge) => {
-                  const config = getBadgeConfig(badge);
-                  return (
+              {/* Layover Info (summary) */}
+              {!expanded && flight.layovers && flight.layovers.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
+                  {flight.layovers.map((layover, idx) => (
                     <span
-                      key={badge}
-                      className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg ${config.className}`}
+                      key={idx}
+                      className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500/80 border border-amber-500/20"
                     >
-                      {config.label}
+                      {formatDuration(layover.duration)} in {layover.id}
                     </span>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Price & Badges */}
+            <div className="flex items-center gap-4 md:flex-col md:items-end md:gap-2">
+              <div className="flex items-center gap-3">
+                {/* Favorite/Save Toggle */}
+                <button
+                  onClick={handleToggleSave}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    isSaved 
+                      ? 'bg-rose-500/20 text-rose-500' 
+                      : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
+                  }`}
+                  aria-label={isSaved ? "Remove from saved" : "Save flight"}
+                >
+                  <svg 
+                    className="w-5 h-5" 
+                    fill={isSaved ? "currentColor" : "none"} 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
+
+                <div className="text-right">
+                  <p className="text-2xl font-black text-white tracking-tight">
+                    ${flight.price?.toLocaleString() || 'N/A'}
+                  </p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">one-way</p>
+                </div>
               </div>
-            )}
+
+              {flight.badges.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 justify-end">
+                  {flight.badges.map((badge) => {
+                    const config = getBadgeConfig(badge);
+                    return (
+                      <span
+                        key={badge}
+                        className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg ${config.className}`}
+                      >
+                        {config.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Expanded Detail Section */}
       {expanded && (
