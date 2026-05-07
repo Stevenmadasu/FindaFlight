@@ -25,7 +25,7 @@ export default function HomePage() {
     setResults(null);
 
     try {
-      // Use client-side search (Azure SWA free tier doesn't support server-side API routes)
+      // Search via backend API routes → SerpApi
       const data = await searchFlightsClient(params);
       setResults(data);
 

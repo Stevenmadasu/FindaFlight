@@ -10,7 +10,7 @@
  */
 
 import { FlightOption, RankedFlight, FlightBadge, Recommendation, PairedItinerary, DestinationCard } from '@/types/flight';
-import { computeWeekendScore } from './mockData';
+import { computeWeekendScore, CITY_NAMES, formatDuration } from './utils';
 
 // Scoring weights
 const WEIGHT_PRICE = 0.40;
@@ -292,14 +292,7 @@ export function buildDestinationCards(
   returnDate: string,
   preference: string = 'best',
 ): DestinationCard[] {
-  const CITY_NAMES: Record<string, string> = {
-    'MIA': 'Miami', 'LAX': 'Los Angeles', 'LAS': 'Las Vegas', 'MCO': 'Orlando',
-    'SFO': 'San Francisco', 'SEA': 'Seattle', 'DEN': 'Denver', 'BNA': 'Nashville',
-    'AUS': 'Austin', 'SAN': 'San Diego', 'BOS': 'Boston', 'JFK': 'New York',
-    'PHX': 'Phoenix', 'TPA': 'Tampa', 'PDX': 'Portland', 'HNL': 'Honolulu',
-    'ATL': 'Atlanta', 'ORD': 'Chicago', 'DFW': 'Dallas', 'MSP': 'Minneapolis',
-    'DTW': 'Detroit', 'CLT': 'Charlotte', 'IAH': 'Houston', 'SLC': 'Salt Lake City',
-  };
+  // CITY_NAMES imported from utils.ts
 
   const cards: DestinationCard[] = [];
 
@@ -380,8 +373,4 @@ export function buildDestinationCards(
   return cards;
 }
 
-export function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
-}
+export { formatDuration } from './utils';

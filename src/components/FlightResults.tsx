@@ -168,15 +168,25 @@ export default function FlightResults({ results }: FlightResultsProps) {
         </div>
       </div>
 
-      {/* Mock Data Indicator */}
-      {results.isMockData && (
+      {/* Data Source Indicator */}
+      {results.isMockData ? (
         <div className="mb-5 flex items-center gap-2 px-4 py-2.5 bg-amber-500/[0.08] border border-amber-500/20 rounded-xl text-sm">
           <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <span className="text-amber-300/80">
-            {results.dataSource === 'hybrid'
-              ? 'Showing hybrid results: outbound uses mock data, return uses live API data.'
-              : 'Showing simulated results for demonstration. Real-time data available with API integration.'}
+            Showing simulated results for demonstration. Real-time data available with API integration.
           </span>
+        </div>
+      ) : (
+        <div className="mb-5 flex items-center gap-2 px-4 py-2.5 bg-teal-500/[0.08] border border-teal-500/20 rounded-xl text-sm">
+          <svg className="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          <span className="text-teal-300/80">
+            Live flight data from Google Flights
+          </span>
+          {results.priceInsights && (
+            <span className="ml-auto text-xs px-2 py-0.5 bg-teal-500/10 border border-teal-500/20 rounded-md text-teal-400">
+              {results.priceInsights.price_level ? `Prices are ${results.priceInsights.price_level}` : 'Price insights available'}
+            </span>
+          )}
         </div>
       )}
 
