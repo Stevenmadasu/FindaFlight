@@ -83,6 +83,7 @@ export const AIRPORTS: Airport[] = [
   { code: 'DSM', name: 'Des Moines Intl', city: 'Des Moines', state: 'IA', country: 'United States', countryCode: 'US', type: 'airport' },
   { code: 'LGA', name: 'LaGuardia', city: 'New York', state: 'NY', country: 'United States', countryCode: 'US', type: 'airport' },
   { code: 'MSY', name: 'Louis Armstrong New Orleans Intl', city: 'New Orleans', state: 'LA', country: 'United States', countryCode: 'US', type: 'airport' },
+  { code: 'BTR', name: 'Baton Rouge Metropolitan', city: 'Baton Rouge', state: 'LA', country: 'United States', countryCode: 'US', type: 'airport' },
   { code: 'OMA', name: 'Eppley Airfield', city: 'Omaha', state: 'NE', country: 'United States', countryCode: 'US', type: 'airport' },
   { code: 'ABQ', name: 'Albuquerque Intl Sunport', city: 'Albuquerque', state: 'NM', country: 'United States', countryCode: 'US', type: 'airport' },
   { code: 'RNO', name: 'Reno-Tahoe Intl', city: 'Reno', state: 'NV', country: 'United States', countryCode: 'US', type: 'airport' },
