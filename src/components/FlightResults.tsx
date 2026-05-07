@@ -20,6 +20,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
   const [maxStops, setMaxStops] = useState<number | null>(null);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [excludeLayoverDeals, setExcludeLayoverDeals] = useState(false);
 
   const isLayoverMode = results.mode === 'layover';
   const isAnywhereMode = results.mode === 'anywhere';
@@ -93,6 +94,12 @@ export default function FlightResults({ results }: FlightResultsProps) {
     if (maxPrice !== null) {
       list = list.filter(f => getPrice(f) <= maxPrice);
     }
+    if (excludeLayoverDeals) {
+      list = list.filter(f => {
+        if (isPaired(f)) return false; // Paired itineraries are layover deals
+        return !f.isLayoverMatch;
+      });
+    }
 
     // Sort
     switch (sortBy) {
@@ -134,6 +141,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
   const clearFilters = () => {
     setMaxStops(null);
     setMaxPrice(null);
+    setExcludeLayoverDeals(false);
   };
 
   if (totalFlights === 0 && !results.flexDateSummary) {
@@ -161,7 +169,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
             )}
             {isLayoverMode && (
               <span className="text-[10px] font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-lg">
-                Hidden City
+                Layover Deal
               </span>
             )}
           </div>
@@ -367,6 +375,26 @@ export default function FlightResults({ results }: FlightResultsProps) {
               <div className="flex justify-between mt-2">
                 <span className="text-[10px] font-medium text-gray-600">${priceRange.min}</span>
                 <span className="text-[10px] font-medium text-gray-600">${priceRange.max}</span>
+              </div>
+
+              {/* Layover Deal Toggle */}
+              <div className="mt-8 pt-6 border-t border-white/[0.05]">
+                <label className="flex items-center gap-4 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={excludeLayoverDeals}
+                      onChange={(e) => setExcludeLayoverDeals(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-10 h-5 rounded-full transition-colors ${excludeLayoverDeals ? 'bg-indigo-500' : 'bg-white/[0.1]'}`}></div>
+                    <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${excludeLayoverDeals ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-white uppercase tracking-widest">Exclude Layover Deals</span>
+                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Only show standard point-to-point itineraries</span>
+                  </div>
+                </label>
               </div>
             </div>
           </div>

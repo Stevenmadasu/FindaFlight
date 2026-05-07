@@ -254,6 +254,30 @@ export default function FlightCard({ flight, index }: FlightCardProps) {
             {/* Right: Actions & Scoring */}
             <div className="space-y-6">
               <div>
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Fare Insights</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Last Updated</p>
+                    <p className="text-xs font-bold text-white">Just now</p>
+                  </div>
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Fare Type</p>
+                    <p className="text-xs font-bold text-indigo-400">Main Cabin</p>
+                  </div>
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Carry-on Bag</p>
+                    <p className="text-xs font-bold text-teal-400">Included</p>
+                  </div>
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Self-Transfer</p>
+                    <p className={`text-xs font-bold ${flight.isSelfTransfer ? 'text-orange-400' : 'text-gray-500'}`}>
+                      {flight.isSelfTransfer ? 'Yes' : 'No'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
                 <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Deal Quality</h4>
                 <div className="glass border border-white/[0.05] rounded-2xl p-5 space-y-4">
                   <ScoreBar label="Price Value" score={flight.priceScore} color="from-teal-500 to-emerald-500" />
@@ -276,9 +300,15 @@ export default function FlightCard({ flight, index }: FlightCardProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </button>
+                <button
+                  onClick={handleBooking}
+                  className="w-full py-3 px-6 bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-gray-300 font-bold uppercase tracking-widest text-[10px] rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  Verify Price on Google Flights
+                </button>
                 <div className="px-2 py-1 bg-white/[0.03] rounded-lg border border-white/[0.05]">
                   <p className="text-[9px] text-gray-500 font-medium text-center leading-relaxed">
-                    By clicking book, you will leave FindaFlight and be redirected to Google Flights to complete your booking. Prices may fluctuate.
+                    By clicking book or verify, you will leave FindaFlight and be redirected to Google Flights. Prices may fluctuate.
                   </p>
                 </div>
               </div>

@@ -9,7 +9,7 @@
 import { rankFlights, rankPairedItineraries, generateRecommendation, buildDestinationCards } from '@/lib/scoring';
 import { FlightSearchParams, FlightOption, SearchResults, RankedFlight, PriceInsights } from '@/types/flight';
 import { DOMESTIC_DESTINATIONS, INTERNATIONAL_DESTINATIONS, ANYWHERE_DESTINATIONS } from '@/lib/utils';
-import { detectHiddenCityOpportunities } from '@/lib/hiddenCity';
+import { detectLayoverOpportunities } from '@/lib/layoverDiscovery';
 import { generateFlexDates, aggregateFlexResults, type FlexRange } from '@/lib/flexDates';
 
 /** Response shape from our API routes */
@@ -206,7 +206,7 @@ async function searchStandard(
 }
 
 /**
- * Layover destination search (hidden-city detection).
+ * Layover destination search (layover detection).
  */
 async function searchLayover(
   origin: string,
@@ -240,7 +240,7 @@ async function searchLayover(
     deep_search: true,
   });
 
-  const annotatedFlights = detectHiddenCityOpportunities(
+  const annotatedFlights = detectLayoverOpportunities(
     throughData.flights,
     destination.toUpperCase(),
     standardPrice,

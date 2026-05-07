@@ -218,7 +218,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Layover Destination</h3>
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  Find hidden-city flights where your destination is the layover. Paired with a return ticket for a complete trip.
+                  Find flights where your destination is the layover. Paired with a return ticket for a complete trip.
                 </p>
               </div>
 

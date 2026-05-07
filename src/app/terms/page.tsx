@@ -40,15 +40,15 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-white mb-3">4. Layover Destination (Hidden-City) Disclaimer</h2>
+            <h2 className="text-xl font-bold text-white mb-3">4. Layover Destination Disclaimer</h2>
             <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
               <p className="text-gray-300 leading-relaxed text-sm">
-                FindaFlight offers a &quot;Layover Destination Search&quot; feature that identifies flights where your intended destination is an intermediate layover. This strategy, commonly known as &quot;hidden-city ticketing,&quot; <strong className="text-orange-300">may violate certain airline terms of service</strong>. By using this feature, you acknowledge that:
+                FindaFlight offers a &quot;Layover Destination Search&quot; feature that identifies flights where your intended destination is an intermediate layover. This strategy <strong className="text-orange-300">may violate certain airline terms of service</strong>. By using this feature, you acknowledge that:
               </p>
               <ul className="list-disc list-inside text-gray-400 text-sm space-y-1 mt-3 leading-relaxed">
                 <li>You are solely responsible for understanding and complying with airline policies.</li>
                 <li>Airlines may cancel your return ticket, revoke frequent flyer miles, or take other action.</li>
-                <li>You must not check baggage on hidden-city itineraries.</li>
+                <li>You must not check baggage on these itineraries.</li>
                 <li>FindaFlight provides this feature for <strong className="text-white">informational purposes only</strong> and assumes no liability.</li>
               </ul>
             </div>

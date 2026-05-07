@@ -149,7 +149,7 @@ export default function SearchForm({ onSearch, onModeChange, loading }: SearchFo
       gradient: 'from-indigo-500 to-cyan-500',
       buttonGradient: 'from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500',
       shadow: 'shadow-indigo-500/25 hover:shadow-indigo-500/40',
-      label: 'Discover Destinations',
+      label: 'Search Flights',
     },
     layover: {
       gradient: 'from-teal-500 to-emerald-500',

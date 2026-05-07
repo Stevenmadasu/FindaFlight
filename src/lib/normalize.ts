@@ -80,6 +80,16 @@ function normalizeFlightResult(raw: SerpApiFlightResult, id: string): FlightOpti
     departure_token: raw.departure_token,
     booking_token: raw.booking_token,
     extensions: raw.extensions,
+
+    // Trust Signal / Metadata fields
+    lastUpdated: new Date().toISOString(),
+    fareType: legs[0]?.travel_class || 'Main Cabin',
+    includesCarryOn: raw.extensions?.some(ext => 
+      ext.toLowerCase().includes('carry-on') && !ext.toLowerCase().includes('not included')
+    ) ?? true,
+    isSelfTransfer: raw.extensions?.some(ext => 
+      ext.toLowerCase().includes('separate tickets') || ext.toLowerCase().includes('self-transfer')
+    ) ?? false,
   };
 }
 

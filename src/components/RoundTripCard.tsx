@@ -148,10 +148,34 @@ export default function RoundTripCard({ paired, index }: RoundTripCardProps) {
             {/* Right: Summary & Booking */}
             <div className="space-y-6">
               <div className="glass border border-white/[0.05] rounded-[24px] p-6 space-y-6">
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Fare Insights</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Last Updated</p>
+                    <p className="text-xs font-bold text-white">{outbound.lastUpdated || 'Just now'}</p>
+                  </div>
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Fare Type</p>
+                    <p className="text-xs font-bold text-indigo-400">{outbound.fareType || 'Main Cabin'}</p>
+                  </div>
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Carry-on</p>
+                    <p className="text-xs font-bold text-teal-400">{outbound.includesCarryOn ? 'Included' : 'Check Fees'}</p>
+                  </div>
+                  <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl p-3">
+                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Self-Transfer</p>
+                    <p className={`text-xs font-bold ${outbound.isSelfTransfer || returnFlight.isSelfTransfer ? 'text-orange-400' : 'text-gray-500'}`}>
+                      {outbound.isSelfTransfer || returnFlight.isSelfTransfer ? 'Yes' : 'No'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass border border-white/[0.05] rounded-[24px] p-6 space-y-6">
                 <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Trip Summary</h4>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-400 font-bold">Base Fare</span>
+                    <span className="text-gray-400 font-bold">Combined Fare</span>
                     <span className="text-white font-black">${combinedPrice.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
@@ -166,15 +190,21 @@ export default function RoundTripCard({ paired, index }: RoundTripCardProps) {
               </div>
 
               <div className="space-y-4">
-                <button
-                  onClick={handleBooking}
-                  className="w-full py-5 px-8 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-black uppercase tracking-[0.2em] text-sm rounded-[24px] shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
-                >
-                  Book Full Trip
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </button>
+                  <button
+                    onClick={handleBooking}
+                    className="w-full py-5 px-8 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-black uppercase tracking-[0.2em] text-sm rounded-[24px] shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    Book Full Trip
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleBooking}
+                    className="w-full py-4 px-8 bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-gray-300 font-bold uppercase tracking-widest text-[11px] rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    Verify Price on Google Flights
+                  </button>
                 <div className="px-4 py-2 bg-white/[0.03] rounded-xl border border-white/[0.05]">
                   <p className="text-[10px] text-gray-500 font-bold text-center leading-relaxed">
                     Redirecting to Google Flights. Multiple bookings may be required for complex itineraries.

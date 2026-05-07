@@ -153,7 +153,7 @@ export interface FlightOption {
   booking_token?: string;
   extensions?: string[];
 
-  // Hidden-city specific optional fields
+  // Layover-specific optional fields
   isLayoverMatch?: boolean;
   ticketedDestination?: {
     id: string;
@@ -162,6 +162,12 @@ export interface FlightOption {
   savings?: number;
   savingsPercent?: number;
   normalRoutePrice?: number;
+
+  // Trust Signal / Metadata fields
+  lastUpdated?: string;
+  fareType?: string;
+  includesCarryOn?: boolean;
+  isSelfTransfer?: boolean;
 
   // Deal scoring
   dealScore?: DealScoreType;

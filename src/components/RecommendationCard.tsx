@@ -42,7 +42,7 @@ export default function RecommendationCard({ recommendation }: RecommendationCar
 
           <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-10">
             <div className="flex-1">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-2">Hidden City Itinerary</p>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-2">Layover Discovery</p>
               <h3 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none mb-4">
                 Destination via <span className="text-teal-400">{paired.outbound.ticketedDestination?.id}</span>
               </h3>

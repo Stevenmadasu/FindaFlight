@@ -1,16 +1,16 @@
 /**
- * FindaFlight — Hidden-City / Layover-Destination Detection
+ * FindaFlight — Layover-Destination Detection
  *
- * Detects hidden-city opportunities from real SerpApi flight data.
+ * Detects layover opportunities from real SerpApi flight data.
  * Computes savings percentages and sorts by value.
  */
 
 import { FlightOption } from '@/types/flight';
 
 /**
- * Detect hidden-city opportunities in a set of flight results.
+ * Detect layover opportunities in a set of flight results.
  */
-export function detectHiddenCityOpportunities(
+export function detectLayoverOpportunities(
   flights: FlightOption[],
   intendedDest: string,
   standardPrice: number | null,
@@ -44,7 +44,7 @@ export function detectHiddenCityOpportunities(
     };
   });
 
-  // Sort: hidden-city matches first, then by savings descending
+  // Sort: layover matches first, then by savings descending
   return annotated.sort((a, b) => {
     if (a.isLayoverMatch && !b.isLayoverMatch) return -1;
     if (!a.isLayoverMatch && b.isLayoverMatch) return 1;
@@ -67,15 +67,15 @@ function checkLayoverMatch(flight: FlightOption, intendedDest: string): boolean 
 }
 
 /**
- * Disclaimer bullets for hidden-city results.
+ * Disclaimer bullets for layover strategy results.
  */
-export const HIDDEN_CITY_DISCLAIMER_BULLETS = [
+export const LAYOVER_STRATEGY_DISCLAIMER_BULLETS = [
   'Airlines may restrict or penalize skipped-leg travel.',
   'Checked bags will continue to the final ticketed destination — carry-on only.',
   'Return legs on the same booking may be canceled if you skip a segment.',
   "Review your airline's contract of carriage before booking.",
 ];
 
-export const HIDDEN_CITY_DISCLAIMER =
-  'Hidden-city ticketing involves booking a flight with a connection at your desired destination and skipping the final leg. ' +
-  HIDDEN_CITY_DISCLAIMER_BULLETS.map((b, i) => `(${i + 1}) ${b}`).join(' ');
+export const LAYOVER_STRATEGY_DISCLAIMER =
+  'Layover strategies involve booking a flight with a connection at your desired destination and skipping the final leg. ' +
+  LAYOVER_STRATEGY_DISCLAIMER_BULLETS.map((b, i) => `(${i + 1}) ${b}`).join(' ');

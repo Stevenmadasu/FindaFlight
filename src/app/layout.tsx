@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description:
     "FindaFlight is an intelligent flight discovery platform that helps you find the best flight based on price, duration, and convenience — not just the cheapest.",
   keywords:
-    "flights, flight search, best flights, cheap flights, fast flights, flight comparison, travel, smart flight search, hidden city, layover destination, take me anywhere",
+    "flights, flight search, best flights, cheap flights, fast flights, flight comparison, travel, smart flight search, layover destination, take me anywhere",
   
   // Open Graph
   openGraph: {

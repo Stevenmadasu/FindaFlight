@@ -13,7 +13,7 @@ An intelligent flight discovery platform powered by **real Google Flights data**
 
 ### 🔍 Three Intelligent Search Modes
 - **Standard Search** — Smart scoring for one-way and round-trip flights. Outbound and return flights are automatically paired to maximize value.
-- **Layover Destination Search** — Our signature "Hidden-City" engine. It finds flights where your destination is actually a layover, saving you up to 40% on airfare.
+- **Layover Destination Search** — Our signature "Layover Destination" engine. It finds flights where your destination is actually a layover, saving you up to 40% on airfare.
 - **Take Me Anywhere** — Pure discovery mode. Enter your origin and dates, and we'll show you the best deals across the globe with personalized rankings.
 
 ### ✈️ Real Flight Data
@@ -112,7 +112,7 @@ Browser (React)                     Server (Next.js API Routes)         External
 - `src/app/` — App Router pages, API routes, and global styles.
 - `src/app/api/flights/` — Server-side API routes (search, return, booking).
 - `src/components/` — Modular, reusable UI components (Glassmorphism design).
-- `src/lib/` — Business logic: SerpApi client, validation, normalization, scoring, hidden-city detection, caching.
+- `src/lib/` — Business logic: SerpApi client, validation, normalization, scoring, layover detection, caching.
 - `src/types/` — Shared TypeScript interfaces for data safety.
 
 ---

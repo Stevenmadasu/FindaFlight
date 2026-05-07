@@ -74,7 +74,7 @@ export default function AboutPage() {
               <div>
                 <h3 className="text-white font-semibold mb-1">Layover Destination</h3>
                 <p className="text-gray-400 text-sm leading-relaxed">
-                  Find hidden-city flights where your intended destination is an intermediate layover on a longer itinerary. Paired with a return one-way flight to create a complete trip.
+                  Find flights where your intended destination is an intermediate layover on a longer itinerary. Paired with a return one-way flight to create a complete trip.
                 </p>
               </div>
             </div>
@@ -103,7 +103,7 @@ export default function AboutPage() {
           </h2>
           <div className="space-y-4 text-gray-300 leading-relaxed">
             <p>
-              FindaFlight supports an advanced discovery mode known as <strong>Layover Destination Search</strong> (commonly referred to as hidden-city ticketing). 
+              FindaFlight supports an advanced discovery mode known as <strong>Layover Destination Search</strong>. 
             </p>
             <p>
               When you enable this mode, we look for flights where your intended destination is actually just an intermediate layover on a longer itinerary. Because airlines price tickets based on market demand rather than distance, these routes can sometimes be dramatically cheaper or open up direct flight availability.
@@ -111,7 +111,7 @@ export default function AboutPage() {
             <div className="bg-white/[0.04] p-4 rounded-xl border border-white/[0.06] mt-4">
                <h3 className="text-teal-400 font-semibold mb-2">How One-Way Pairing Works</h3>
                <p className="text-sm text-gray-400">
-                 Since layover/hidden-city strategies only work for one-way outbound flights (if you skip the final leg, the airline cancels your return), FindaFlight automatically pairs a generated outbound layover match with a standard one-way return flight from your destination. 
+                 Since layover strategies only work for one-way outbound flights (if you skip the final leg, the airline cancels your return), FindaFlight automatically pairs a generated outbound layover match with a standard one-way return flight from your destination. 
                  <br/><br/>
                  When you book, you simply purchase two independent one-way tickets:
                </p>
@@ -123,7 +123,7 @@ export default function AboutPage() {
             <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 mt-4">
               <h3 className="text-orange-400 font-semibold mb-1">Important Disclaimers</h3>
               <p className="text-sm text-orange-200/80">
-                You must leave the airport during your layover and never check baggage on the outbound flight (otherwise your bags will fly to the ticketed final destination). Users must review airline policies around hidden-city ticketing themselves. FindaFlight is purely for discovery and comparison.
+                You must leave the airport during your layover and never check baggage on the outbound flight (otherwise your bags will fly to the ticketed final destination). Users must review airline policies around layover strategies themselves. FindaFlight is purely for discovery and comparison.
               </p>
             </div>
           </div>

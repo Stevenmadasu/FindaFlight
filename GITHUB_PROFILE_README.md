@@ -20,7 +20,7 @@ I build data-driven applications that bridge the gap between complex algorithms 
 
 ### ✈️ [FindAFlight](https://findaflight.site)
 An intelligent flight discovery engine that uses a weighted scoring algorithm to find the best value for money. 
-- **Features:** Hidden-city discovery, "Take Me Anywhere" mode, and smart round-trip pairing.
+- **Features:** Layover discovery, "Take Me Anywhere" mode, and smart round-trip pairing.
 - **Tech:** Next.js, Firebase, Azure.
 
 ### 🌌 [Massive Data Ingestion Pipeline](https://github.com/stevenmadasu/massive-ingestion)

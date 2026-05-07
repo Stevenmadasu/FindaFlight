@@ -543,10 +543,10 @@ All form fields are empty. Placeholder text is visible inside each field (e.g., 
 
 ## 4.1 Executive Summary
 
-**FindAFlight** is a travel search and decision-support platform designed to help budget-conscious travelers identify cost-effective flight routes by uncovering "hidden-city" ticketing and creative multi-leg itineraries. Unlike traditional booking engines, FindAFlight focuses on transparency and risk management, empowering users to save significant amounts on airfare by strategically using layovers.
+**FindAFlight** is a travel search and decision-support platform designed to help budget-conscious travelers identify cost-effective flight routes by uncovering "layover destination" opportunities and creative multi-leg itineraries. Unlike traditional booking engines, FindAFlight focuses on transparency and risk management, empowering users to save significant amounts on airfare by strategically using layovers.
 
 ### Key Insights & Recommendations
-- **Innovation**: Introduced a novel "Creative Routes" engine that pairs one-way hidden-city tickets with return legs to maximize savings.
+- **Innovation**: Introduced a novel "Creative Routes" engine that pairs one-way layover tickets with return legs to maximize savings.
 - **Transparency**: Implemented a "Risk Assessment" framework that educates users on layover connection times and baggage limitations.
 - **Engagement**: Analytics show a 40% higher click-through rate on routes labeled "Creative Total" compared to standard round trips.
 - **Reliability**: Integrated Firebase Analytics to monitor search performance and identify high-demand route pairs for future cache optimization.
@@ -558,7 +558,7 @@ All form fields are empty. Placeholder text is visible inside each field (e.g., 
 We integrated Google Analytics via the Firebase SDK to track user behavior and application performance. Below are the key findings from the Sprint 2 testing phase.
 
 ### User Acquisition
-Our primary traffic sources are **Direct** and **Organic Search**. This suggests that our "Hidden City" niche is driving targeted users who are specifically looking for airfare workarounds.
+Our primary traffic sources are **Direct** and **Organic Search**. This suggests that our "Layover Destination" niche is driving targeted users who are specifically looking for airfare value.
 
 ![User Acquisition Analytics](./screenshots/03_search_results_summary.png)
 *Note: We are tracking clicks on 'Potential Savings' as our primary conversion event.*

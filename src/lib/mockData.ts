@@ -340,7 +340,7 @@ export function generateMockLayoverFlights(
     const leg2Duration = 60 + Math.floor(rng() * 240);
     const totalDuration = leg1Duration + layoverDuration + leg2Duration;
 
-    // Layover/Hidden-city flights are often cheap
+    // Layover/Discovery flights are often cheap
     const price = 89 + Math.floor(rng() * 250);
 
     const departHour = 5 + Math.floor(rng() * 15);

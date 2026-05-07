@@ -11,7 +11,7 @@ export interface DealScoreBreakdown {
   priceValue: number;   // 0-100
   speed: number;        // 0-100
   convenience: number;  // 0-100
-  savings: number;      // 0-100 (only >0 for hidden-city)
+  savings: number;      // 0-100 (only >0 for layover deals)
 }
 
 export interface DealScore {
@@ -108,6 +108,6 @@ function buildExplanation(breakdown: DealScoreBreakdown, flight: FlightOption): 
   else if (breakdown.priceValue >= 50) parts.push('Fair price');
   if (breakdown.speed >= 75) parts.push('Fast route');
   if (breakdown.convenience >= 85) parts.push(flight.stops === 0 ? 'Direct flight' : 'Few stops');
-  if (breakdown.savings >= 70 && flight.isLayoverMatch) parts.push('Hidden-city savings');
+  if (breakdown.savings >= 70 && flight.isLayoverMatch) parts.push('Layover savings');
   return parts.length > 0 ? parts.join(' • ') : 'Solid option';
 }

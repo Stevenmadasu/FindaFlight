@@ -74,7 +74,7 @@ export default function PairedFlightCard({ paired }: PairedFlightCardProps) {
               </p>
             </div>
             <p className="text-xs text-gray-500 font-bold italic">
-              Hidden-City efficiency detected
+              Layover efficiency detected
             </p>
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function PairedFlightCard({ paired }: PairedFlightCardProps) {
                       </div>
                       <div>
                         <p className="text-[10px] font-black text-teal-500/60 uppercase tracking-widest">Ticket 01</p>
-                        <p className="text-sm font-black text-white">Outbound Hidden-City</p>
+                        <p className="text-sm font-black text-white">Outbound Layover</p>
                       </div>
                     </div>
                     <span className="text-xl font-black text-teal-400">${outbound.price}</span>
@@ -177,7 +177,7 @@ export default function PairedFlightCard({ paired }: PairedFlightCardProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                     </div>
-                    <h4 className="text-orange-400 font-black text-lg uppercase tracking-widest">Hidden-City Protocol</h4>
+                    <h4 className="text-orange-400 font-black text-lg uppercase tracking-widest">Layover Protocol</h4>
                   </div>
                   
                   <div className="space-y-4">
@@ -206,6 +206,27 @@ export default function PairedFlightCard({ paired }: PairedFlightCardProps) {
                 </div>
 
                 <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/[0.04] border border-white/[0.05] rounded-2xl p-4">
+                      <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Last Updated</p>
+                      <p className="text-xs font-bold text-white">{outbound.lastUpdated || 'Just now'}</p>
+                    </div>
+                    <div className="bg-white/[0.04] border border-white/[0.05] rounded-2xl p-4">
+                      <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Fare Type</p>
+                      <p className="text-xs font-bold text-indigo-400">{outbound.fareType || 'Main Cabin'}</p>
+                    </div>
+                    <div className="bg-white/[0.04] border border-white/[0.05] rounded-2xl p-4">
+                      <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Carry-on</p>
+                      <p className="text-xs font-bold text-teal-400">{outbound.includesCarryOn ? 'Included' : 'Check Fees'}</p>
+                    </div>
+                    <div className="bg-white/[0.04] border border-white/[0.05] rounded-2xl p-4">
+                      <p className="text-[9px] font-black text-gray-600 uppercase tracking-tighter mb-1">Self-Transfer</p>
+                      <p className={`text-xs font-bold ${outbound.isSelfTransfer || returnFlight.isSelfTransfer ? 'text-orange-400' : 'text-gray-500'}`}>
+                        {outbound.isSelfTransfer || returnFlight.isSelfTransfer ? 'Yes' : 'No'}
+                      </p>
+                    </div>
+                  </div>
+
                   <button
                     onClick={handleBooking}
                     className="w-full py-5 px-8 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black uppercase tracking-[0.2em] text-sm rounded-3xl shadow-2xl shadow-teal-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
@@ -214,6 +235,12 @@ export default function PairedFlightCard({ paired }: PairedFlightCardProps) {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
+                  </button>
+                  <button
+                    onClick={handleBooking}
+                    className="w-full py-4 px-8 bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-gray-300 font-bold uppercase tracking-widest text-[11px] rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    Verify Combined Prices
                   </button>
                   <div className="px-4 py-2 bg-white/[0.03] rounded-xl border border-white/[0.05]">
                     <p className="text-[10px] text-gray-500 font-bold text-center leading-relaxed">
