@@ -11,12 +11,20 @@ import { useAuth } from '@/hooks/useAuth';
 export default function HomePage() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<string>('');
   const [error, setError] = useState('');
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [pendingSearch, setPendingSearch] = useState<any>(null);
+  const [searchMode, setSearchMode] = useState<SearchMode>('standard');
   
   const { user } = useAuth();
   const isAuthenticated = !!user;
+
+  const handleModeChange = (newMode: SearchMode) => {
+    setSearchMode(newMode);
+    setResults(null);
+    setError('');
+  };
 
   const handleSearch = async (params: {
     origin: string;
@@ -29,24 +37,55 @@ export default function HomePage() {
     flexDates?: boolean;
     includeNearby?: boolean;
   }) => {
+    // Check Cache
+    const cacheKey = `fif_cache_${params.mode}_${params.origin}_${params.destination}_${params.departureDate}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      // If cache is less than 15 mins old
+      if (Date.now() - parsed.timestamp < 15 * 60 * 1000) {
+        console.log('[Cache] Hit', cacheKey);
+        setResults({ ...parsed.data, _isCached: true });
+        setTimeout(() => {
+          document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+        return;
+      }
+    }
+
     setLoading(true);
     setError('');
     setResults(null);
+    setLoadingPhase('Connecting to search service...');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 12000); // 12 second timeout
 
     try {
+      // Phase updates
+      setTimeout(() => setLoadingPhase('Analyzing optimal combinations...'), 3000);
+      setTimeout(() => setLoadingPhase('Finalizing best itineraries...'), 7000);
+
       // Pass authentication status to the search client
       const data = await searchFlightsClient({
         ...params,
         isAuthenticated
       });
       
+      clearTimeout(timeoutId);
       setResults(data);
+
+      // Cache results
+      sessionStorage.setItem(cacheKey, JSON.stringify({
+        timestamp: Date.now(),
+        data
+      }));
 
       // If results indicate more are available via auth, and user isn't authed, show gate
       if (data.requiresAuth && !isAuthenticated) {
         setPendingSearch(params);
-        // We show results first, then the gate might pop up or be visible as a "load more"
-        // For now, let's just trigger the gate after a short delay if it's "anywhere" mode
         if (params.mode === 'anywhere') {
           setTimeout(() => setShowAuthGate(true), 2000);
         }
@@ -55,10 +94,15 @@ export default function HomePage() {
       setTimeout(() => {
         document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 200);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to search flights');
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setError('Search timed out. This can happen during peak times or complex route calculations. Please try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to search flights');
+      }
     } finally {
       setLoading(false);
+      setLoadingPhase('');
     }
   };
 
@@ -93,24 +137,36 @@ export default function HomePage() {
         </div>
 
         <div className="animate-slide-up max-w-4xl mx-auto">
-          <SearchForm onSearch={handleSearch} loading={loading} />
+          <SearchForm onSearch={handleSearch} onModeChange={handleModeChange} loading={loading} />
         </div>
-
+ 
         {error && (
-          <div className="mt-6 max-w-4xl mx-auto bg-red-500/[0.1] border border-red-500/30 text-red-300 px-5 py-4 rounded-xl animate-fade-in flex items-center gap-3" role="alert">
-            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {error}
+          <div className="mt-6 max-w-4xl mx-auto space-y-4">
+            <div className="bg-red-500/[0.1] border border-red-500/30 text-red-300 px-5 py-4 rounded-xl animate-fade-in flex items-center gap-3" role="alert">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{error}</span>
+            </div>
+            {error.includes('timed out') && (
+              <div className="flex justify-center">
+                <button 
+                  onClick={() => document.getElementById('search')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
+                  className="px-6 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-white rounded-lg text-sm font-medium transition-all"
+                >
+                  Retry Search
+                </button>
+              </div>
+            )}
           </div>
         )}
-
+ 
         {loading && (
           <div className="mt-12 text-center animate-fade-in">
             <div className="glass-strong rounded-2xl p-10 max-w-md mx-auto">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-400 mx-auto mb-5"></div>
-              <p className="text-gray-300 font-medium">Searching optimal combinations...</p>
-              <p className="text-gray-500 text-sm mt-2">Generating and scoring the best itineraries</p>
+              <p className="text-gray-300 font-medium">{loadingPhase || 'Searching optimal combinations...'}</p>
+              <p className="text-gray-500 text-sm mt-2">This may take up to 12 seconds</p>
             </div>
           </div>
         )}

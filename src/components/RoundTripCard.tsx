@@ -28,73 +28,90 @@ export default function RoundTripCard({ paired, index }: RoundTripCardProps) {
 
   const isbestValue = label === 'Best round-trip value';
 
+  const handleBooking = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `https://www.google.com/flights?hl=en#flt=${outbound.flights[0]?.departure_airport.id}.${outbound.flights[outbound.flights.length-1]?.arrival_airport.id}.${outbound.flights[0]?.departure_airport.time.split(' ')[0]}*${returnFlight.flights[0]?.departure_airport.id}.${returnFlight.flights[returnFlight.flights.length-1]?.arrival_airport.id}.${returnFlight.flights[0]?.departure_airport.time.split(' ')[0]}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div
-      className={`rounded-2xl overflow-hidden transition-all duration-300 animate-slide-up cursor-pointer ${
+      className={`rounded-[32px] overflow-hidden transition-all duration-500 animate-slide-up cursor-pointer border ${
         isbestValue
-          ? 'bg-[#111827]/80 backdrop-blur-md border-2 border-indigo-500/30 shadow-lg shadow-indigo-500/10'
-          : 'glass hover:bg-white/[0.06]'
+          ? 'bg-[#0f172a]/80 backdrop-blur-xl border-indigo-500/40 shadow-2xl shadow-indigo-500/10 ring-1 ring-indigo-500/20'
+          : 'glass border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.02]'
       }`}
       style={{ animationDelay, animationFillMode: 'backwards' }}
       onClick={() => setExpanded(!expanded)}
+      role="button"
+      aria-expanded={expanded}
     >
       {/* Header */}
-      <div className="p-5 md:p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-6 md:p-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           {/* Left: Label + Route */}
           <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className={`px-3 py-1 text-xs font-bold rounded-md uppercase tracking-widest border ${
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <span className={`px-3 py-1 text-[10px] font-black rounded-lg uppercase tracking-[0.15em] border ${
                 isbestValue
-                  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                  : 'bg-white/[0.06] text-gray-400 border-white/[0.06]'
+                  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
+                  : 'bg-white/[0.04] text-gray-500 border-white/[0.05]'
               }`}>
                 {label || 'Round-trip option'}
               </span>
-              <span className="text-gray-500 text-sm font-medium bg-white/[0.04] px-2 py-0.5 rounded-md border border-white/[0.06]">
-                Score: {score}
+              <span className="text-gray-500 text-[10px] font-black bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.05] uppercase tracking-widest">
+                SCORE: {score}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <p className="text-white font-semibold">
-                {outbound.flights[0]?.departure_airport?.id} → {outbound.flights[outbound.flights.length - 1]?.arrival_airport?.id}
-              </p>
-              <span className="text-gray-500">⇄</span>
-              <p className="text-white font-semibold">
-                {returnFlight.flights[0]?.departure_airport?.id} → {returnFlight.flights[returnFlight.flights.length - 1]?.arrival_airport?.id}
-              </p>
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <p className="text-3xl font-black text-white tracking-tighter">
+                  {outbound.flights[0]?.departure_airport?.id}
+                  <span className="mx-3 text-gray-700 font-medium">⇄</span>
+                  {outbound.flights[outbound.flights.length - 1]?.arrival_airport?.id}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    {airlineList}
+                  </p>
+                  <span className="w-1 h-1 rounded-full bg-gray-700"></span>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    {formatDuration(totalDuration)} Total
+                  </p>
+                </div>
+              </div>
             </div>
-
-            <p className="text-xs text-gray-500 mt-1">
-              {airlineList} · Total travel: {formatDuration(totalDuration)}
-            </p>
           </div>
 
           {/* Right: Pricing */}
-          <div className="flex items-center gap-6">
-            <div className="text-center">
-              <p className="text-xs text-gray-500">Outbound</p>
-              <p className="text-lg font-semibold text-white">${outbound.price}</p>
+          <div className="flex items-center gap-10">
+            <div className="flex items-center gap-6 pr-8 border-r border-white/[0.05]">
+              <div className="text-center">
+                <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Out</p>
+                <p className="text-xl font-bold text-white/90">${outbound.price}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Ret</p>
+                <p className="text-xl font-bold text-white/90">${returnFlight.price}</p>
+              </div>
             </div>
-            <div className="text-gray-600">+</div>
-            <div className="text-center">
-              <p className="text-xs text-gray-500">Return</p>
-              <p className="text-lg font-semibold text-white">${returnFlight.price}</p>
-            </div>
-            <div className="text-center border-l border-white/[0.08] pl-6">
-              <p className="text-xs text-gray-500">Combined</p>
-              <p className={`text-2xl font-bold ${isbestValue ? 'text-indigo-400' : 'text-white'}`}>
+
+            <div className="text-right">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Combined</p>
+              <p className={`text-5xl font-black tracking-tighter leading-none ${isbestValue ? 'text-indigo-400' : 'text-white'}`}>
                 ${combinedPrice.toLocaleString()}
               </p>
             </div>
 
-            <div className="h-8 w-8 flex items-center justify-center rounded-full bg-white/[0.04]">
+            <div className={`h-14 w-14 flex items-center justify-center rounded-2xl transition-all duration-500 ${
+              expanded ? 'bg-indigo-500 text-black shadow-lg shadow-indigo-500/30' : 'bg-white/[0.04] border border-white/[0.06] text-gray-400'
+            }`}>
               <svg
-                className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+                className={`w-7 h-7 transition-transform duration-500 ${expanded ? 'rotate-180' : ''}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </div>
@@ -103,26 +120,67 @@ export default function RoundTripCard({ paired, index }: RoundTripCardProps) {
 
       {/* Expanded */}
       {expanded && (
-        <div className="border-t border-white/[0.06] p-5 md:p-6 bg-black/20 animate-fade-in space-y-4">
-          {/* Outbound */}
-          <div className="border border-indigo-500/20 rounded-xl overflow-hidden">
-            <div className="bg-indigo-500/5 px-4 py-2 border-b border-indigo-500/20 flex justify-between items-center">
-              <span className="text-indigo-400 text-xs font-bold uppercase tracking-wider">Outbound Flight</span>
-              <span className="text-white font-semibold text-sm">${outbound.price}</span>
-            </div>
-            <div className="p-2 pointer-events-none">
-              <FlightCard flight={outbound} index={0} />
-            </div>
-          </div>
+        <div className="border-t border-white/[0.06] p-6 md:p-10 bg-white/[0.02] animate-fade-in space-y-10">
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-10">
+            {/* Left: Itinerary Details */}
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-[10px] font-black text-indigo-500/60 uppercase tracking-widest">Outbound Segment</span>
+                  <span className="text-sm font-black text-white">${outbound.price}</span>
+                </div>
+                <div className="pointer-events-none opacity-90 scale-[0.98] origin-top">
+                  <FlightCard flight={outbound} index={0} />
+                </div>
+              </div>
 
-          {/* Return */}
-          <div className="border border-white/[0.06] rounded-xl overflow-hidden">
-            <div className="bg-white/[0.02] px-4 py-2 border-b border-white/[0.06] flex justify-between items-center">
-              <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Return Flight</span>
-              <span className="text-white font-semibold text-sm">${returnFlight.price}</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-[10px] font-black text-violet-500/60 uppercase tracking-widest">Return Segment</span>
+                  <span className="text-sm font-black text-white">${returnFlight.price}</span>
+                </div>
+                <div className="pointer-events-none opacity-90 scale-[0.98] origin-top">
+                  <FlightCard flight={returnFlight} index={0} />
+                </div>
+              </div>
             </div>
-            <div className="p-2 pointer-events-none">
-              <FlightCard flight={returnFlight} index={0} />
+
+            {/* Right: Summary & Booking */}
+            <div className="space-y-6">
+              <div className="glass border border-white/[0.05] rounded-[24px] p-6 space-y-6">
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Trip Summary</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 font-bold">Base Fare</span>
+                    <span className="text-white font-black">${combinedPrice.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 font-bold">Taxes & Fees</span>
+                    <span className="text-teal-400 font-black">Included</span>
+                  </div>
+                  <div className="pt-3 border-t border-white/[0.05] flex justify-between items-center">
+                    <span className="text-xs font-black text-white uppercase tracking-widest">Total</span>
+                    <span className="text-2xl font-black text-white tracking-tighter">${combinedPrice.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={handleBooking}
+                  className="w-full py-5 px-8 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-black uppercase tracking-[0.2em] text-sm rounded-[24px] shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                  Book Full Trip
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </button>
+                <div className="px-4 py-2 bg-white/[0.03] rounded-xl border border-white/[0.05]">
+                  <p className="text-[10px] text-gray-500 font-bold text-center leading-relaxed">
+                    Redirecting to Google Flights. Multiple bookings may be required for complex itineraries.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

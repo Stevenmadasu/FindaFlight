@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AirportInput from './AirportInput';
 import { SearchMode, SearchPreference } from '@/types/flight';
 
@@ -16,45 +16,84 @@ interface SearchFormProps {
     flexDates?: boolean;
     includeNearby?: boolean;
   }) => void;
+  onModeChange?: (mode: SearchMode) => void;
   loading: boolean;
 }
 
-export default function SearchForm({ onSearch, loading }: SearchFormProps) {
-  const [mode, setMode] = useState<SearchMode>('standard');
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [departureDate, setDepartureDate] = useState('');
-  const [returnDate, setReturnDate] = useState('');
+export default function SearchForm({ onSearch, onModeChange, loading }: SearchFormProps) {
+  // Persistence initialization
+  const [mode, setModeInternal] = useState<SearchMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('findaflight_mode') as SearchMode) || 'standard';
+    }
+    return 'standard';
+  });
+  
+  const [origin, setOrigin] = useState(() => 
+    (typeof window !== 'undefined' ? localStorage.getItem('findaflight_origin') || '' : '')
+  );
+  const [destination, setDestination] = useState(() => 
+    (typeof window !== 'undefined' ? localStorage.getItem('findaflight_destination') || '' : '')
+  );
+  const [departureDate, setDepartureDate] = useState(() => 
+    (typeof window !== 'undefined' ? localStorage.getItem('findaflight_departureDate') || '' : '')
+  );
+  const [returnDate, setReturnDate] = useState(() => 
+    (typeof window !== 'undefined' ? localStorage.getItem('findaflight_returnDate') || '' : '')
+  );
   const [preference, setPreference] = useState<SearchPreference>('best');
   const [maxPrice, setMaxPrice] = useState('');
   const [flexDates, setFlexDates] = useState(false);
   const [includeNearby, setIncludeNearby] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  const setMode = (newMode: SearchMode) => {
+    setModeInternal(newMode);
+    localStorage.setItem('findaflight_mode', newMode);
+    // Clear all errors when switching modes
+    setErrors({});
+    if (onModeChange) onModeChange(newMode);
+  };
+
+  // Sync other fields to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('findaflight_origin', origin);
+      localStorage.setItem('findaflight_destination', destination);
+      localStorage.setItem('findaflight_departureDate', departureDate);
+      localStorage.setItem('findaflight_returnDate', returnDate || '');
+    }
+  }, [origin, destination, departureDate, returnDate]);
+
+  // Helper to update state and clear error
+  const updateField = (field: string, value: any, setter: (v: any) => void) => {
+    setter(value);
+    if (errors[field]) {
+      const newErrors = { ...errors };
+      delete newErrors[field];
+      setErrors(newErrors);
+    }
+  };
+
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    // Relaxed validation: allow comma separated 3-letter codes or Google location IDs
-    const iataRegex = /^[A-Z, ]{3,}$/i;
-    const googleIdRegex = /^\/[mg]\/[a-z0-9_]+$/;
+    console.log('[Form] Validating:', { mode, origin, destination, departureDate, returnDate });
 
-    if (!origin) {
-      newErrors.origin = 'Select an airport';
-    } else if (!iataRegex.test(origin) && !googleIdRegex.test(origin)) {
-      // newErrors.origin = 'Invalid code';
+    if (!origin || origin.trim().length < 3) {
+      newErrors.origin = 'Origin airport code (3 letters) is required';
     }
 
     if (mode !== 'anywhere') {
-      if (!destination) {
-        newErrors.destination = 'Select an airport';
-      }
-      if (origin && destination && origin.toUpperCase() === destination.toUpperCase()) {
+      if (!destination || destination.trim().length < 3) {
+        newErrors.destination = 'Destination airport code (3 letters) is required';
+      } else if (origin && destination && origin.toUpperCase().trim() === destination.toUpperCase().trim()) {
         newErrors.destination = 'Must be different from origin';
       }
     }
 
     if (!departureDate) {
-      newErrors.departureDate = 'Select a departure date';
+      newErrors.departureDate = 'Departure date is required';
     } else {
       const selectedDate = new Date(departureDate);
       const today = new Date();
@@ -64,18 +103,20 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
       }
     }
 
-    if ((mode === 'layover' || mode === 'anywhere') && !returnDate) {
-      newErrors.returnDate = 'Required for this search mode';
-    }
-
-    if (returnDate) {
-      const outDate = new Date(departureDate);
-      const retDate = new Date(returnDate);
-      if (retDate < outDate) {
-        newErrors.returnDate = 'Must be after departure';
+    // Return date is REQUIRED for layover and anywhere modes
+    if ((mode === 'layover' || mode === 'anywhere')) {
+      if (!returnDate) {
+        newErrors.returnDate = 'Return date is required for this mode';
       }
     }
 
+    if (departureDate && returnDate) {
+      if (new Date(returnDate) < new Date(departureDate)) {
+        newErrors.returnDate = 'Return date must be after departure';
+      }
+    }
+
+    console.log('[Form] Errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -108,7 +149,7 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
       gradient: 'from-indigo-500 to-cyan-500',
       buttonGradient: 'from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500',
       shadow: 'shadow-indigo-500/25 hover:shadow-indigo-500/40',
-      label: 'Search Flights',
+      label: 'Discover Destinations',
     },
     layover: {
       gradient: 'from-teal-500 to-emerald-500',
@@ -199,22 +240,22 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
               <AirportInput
                 id="origin"
-                label="From"
+                label="From *"
                 value={origin}
-                onChange={setOrigin}
+                onChange={(val) => updateField('origin', val, setOrigin)}
                 placeholder="City or CID"
                 error={errors.origin}
               />
 
               <div>
                 <label htmlFor="departureDate" className="block text-sm font-medium text-gray-300 mb-2">
-                  Departure
+                  Departure <span className="text-violet-400">*</span>
                 </label>
                 <input
                   id="departureDate"
                   type="date"
                   value={departureDate}
-                  onChange={(e) => setDepartureDate(e.target.value)}
+                  onChange={(e) => updateField('departureDate', e.target.value, setDepartureDate)}
                   min={new Date().toISOString().split('T')[0]}
                   className={`w-full px-4 py-3 bg-white/[0.06] border ${
                     errors.departureDate ? 'border-red-500/60' : 'border-white/[0.1]'
@@ -225,13 +266,13 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
 
               <div>
                 <label htmlFor="returnDate" className="block text-sm font-medium text-gray-300 mb-2">
-                  Return <span className="text-violet-400 ml-1">*</span>
+                  Return <span className="text-violet-400">*</span>
                 </label>
                 <input
                   id="returnDate"
                   type="date"
                   value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
+                  onChange={(e) => updateField('returnDate', e.target.value, setReturnDate)}
                   min={departureDate || new Date().toISOString().split('T')[0]}
                   className={`w-full px-4 py-3 bg-white/[0.06] border ${
                     errors.returnDate ? 'border-red-500/60' : 'border-white/[0.1]'
@@ -288,9 +329,9 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_auto_1fr_1fr_1fr] gap-4 md:gap-5 items-start">
               <AirportInput
                 id="origin"
-                label="From"
+                label="From *"
                 value={origin}
-                onChange={setOrigin}
+                onChange={(val) => updateField('origin', val, setOrigin)}
                 placeholder="City or CID"
                 error={errors.origin}
               />
@@ -310,22 +351,22 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
 
               <AirportInput
                 id="destination"
-                label="To (Destination)"
+                label="To (Destination) *"
                 value={destination}
-                onChange={setDestination}
+                onChange={(val) => updateField('destination', val, setDestination)}
                 placeholder="City or MIA"
                 error={errors.destination}
               />
 
               <div>
                 <label htmlFor="departureDate" className="block text-sm font-medium text-gray-300 mb-2">
-                  Departure
+                  Departure *
                 </label>
                 <input
                   id="departureDate"
                   type="date"
                   value={departureDate}
-                  onChange={(e) => setDepartureDate(e.target.value)}
+                  onChange={(e) => updateField('departureDate', e.target.value, setDepartureDate)}
                   min={new Date().toISOString().split('T')[0]}
                   className={`w-full px-4 py-3 bg-white/[0.06] border ${
                     errors.departureDate ? 'border-red-500/60' : 'border-white/[0.1]'
@@ -343,7 +384,7 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
                   id="returnDate"
                   type="date"
                   value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
+                  onChange={(e) => updateField('returnDate', e.target.value, setReturnDate)}
                   min={departureDate || new Date().toISOString().split('T')[0]}
                   className={`w-full px-4 py-3 bg-white/[0.06] border ${
                     errors.returnDate ? 'border-red-500/60' : 'border-white/[0.1]'

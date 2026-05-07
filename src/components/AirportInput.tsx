@@ -130,6 +130,9 @@ export default function AirportInput({
           fetchRemoteSuggestions(val);
         }, 400);
       }
+      
+      // Update parent immediately so form validation works even if no item selected
+      onChange(val);
     } else {
       setItems([]);
       setIsOpen(false);

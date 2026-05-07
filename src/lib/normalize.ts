@@ -16,6 +16,20 @@ import {
 } from '@/types/flight';
 
 /**
+ * Generate a stable ID for a flight result based on its key attributes.
+ */
+function generateStableId(raw: SerpApiFlightResult): string {
+  if (!raw.flights || raw.flights.length === 0) return Math.random().toString(36).substring(7);
+  
+  // Combine airline, flight numbers, and departure times for a stable key
+  const flightKey = raw.flights.map(f => 
+    `${f.airline}-${f.flight_number}-${f.departure_airport?.time}`
+  ).join('|');
+  
+  return btoa(flightKey).substring(0, 16);
+}
+
+/**
  * Normalize the full SerpApi response into a list of FlightOptions.
  * Processes both best_flights and other_flights arrays.
  */
@@ -23,14 +37,14 @@ export function normalizeFlightResults(data: SerpApiFlightResponse): FlightOptio
   const flights: FlightOption[] = [];
 
   if (data.best_flights) {
-    data.best_flights.forEach((raw, index) => {
-      flights.push(normalizeFlightResult(raw, `best-${index}`));
+    data.best_flights.forEach((raw) => {
+      flights.push(normalizeFlightResult(raw, generateStableId(raw)));
     });
   }
 
   if (data.other_flights) {
-    data.other_flights.forEach((raw, index) => {
-      flights.push(normalizeFlightResult(raw, `other-${index}`));
+    data.other_flights.forEach((raw) => {
+      flights.push(normalizeFlightResult(raw, generateStableId(raw)));
     });
   }
 
