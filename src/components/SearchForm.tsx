@@ -13,6 +13,8 @@ interface SearchFormProps {
     mode: SearchMode;
     preference?: SearchPreference;
     maxPrice?: number;
+    flexDates?: boolean;
+    includeNearby?: boolean;
   }) => void;
   loading: boolean;
 }
@@ -25,20 +27,27 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
   const [returnDate, setReturnDate] = useState('');
   const [preference, setPreference] = useState<SearchPreference>('best');
   const [maxPrice, setMaxPrice] = useState('');
+  const [flexDates, setFlexDates] = useState(false);
+  const [includeNearby, setIncludeNearby] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!origin || !/^[A-Za-z]{3}$/.test(origin)) {
+    // Relaxed validation: allow comma separated 3-letter codes or Google location IDs
+    const iataRegex = /^[A-Z, ]{3,}$/i;
+    const googleIdRegex = /^\/[mg]\/[a-z0-9_]+$/;
+
+    if (!origin) {
       newErrors.origin = 'Select an airport';
+    } else if (!iataRegex.test(origin) && !googleIdRegex.test(origin)) {
+      // newErrors.origin = 'Invalid code';
     }
 
     if (mode !== 'anywhere') {
-      if (!destination || !/^[A-Za-z]{3}$/.test(destination)) {
+      if (!destination) {
         newErrors.destination = 'Select an airport';
       }
-
       if (origin && destination && origin.toUpperCase() === destination.toUpperCase()) {
         newErrors.destination = 'Must be different from origin';
       }
@@ -75,13 +84,15 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
     e.preventDefault();
     if (validateForm()) {
       onSearch({
-        origin: origin.toUpperCase(),
-        destination: mode === 'anywhere' ? 'ANYWHERE' : destination.toUpperCase(),
+        origin: origin.toUpperCase().replace(/\s+/g, ''),
+        destination: mode === 'anywhere' ? 'ANYWHERE' : destination.toUpperCase().replace(/\s+/g, ''),
         departureDate,
         returnDate: returnDate || undefined,
         mode,
         preference: mode === 'anywhere' ? preference : undefined,
         maxPrice: mode === 'anywhere' && maxPrice ? Number(maxPrice) : undefined,
+        flexDates,
+        includeNearby,
       });
     }
   };
@@ -358,10 +369,45 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
           </>
         )}
 
+        {/* Advanced Options Toggle */}
+        <div className="mt-4 flex flex-wrap items-center gap-6">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={flexDates}
+                onChange={(e) => setFlexDates(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-10 h-5 rounded-full transition-colors ${flexDates ? 'bg-indigo-500' : 'bg-white/[0.1]'}`}></div>
+              <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${flexDates ? 'translate-x-5' : 'translate-x-0'}`}></div>
+            </div>
+            <span className="text-sm font-medium text-gray-400 group-hover:text-gray-300 transition-colors">
+              Check nearby dates (±3 days)
+            </span>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={includeNearby}
+                onChange={(e) => setIncludeNearby(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-10 h-5 rounded-full transition-colors ${includeNearby ? 'bg-indigo-500' : 'bg-white/[0.1]'}`}></div>
+              <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${includeNearby ? 'translate-x-5' : 'translate-x-0'}`}></div>
+            </div>
+            <span className="text-sm font-medium text-gray-400 group-hover:text-gray-300 transition-colors">
+              Include nearby airports
+            </span>
+          </label>
+        </div>
+
         <button
           type="submit"
           disabled={loading}
-          className={`mt-4 w-full py-4 px-6 font-bold text-lg rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 bg-gradient-to-r ${currentMode.buttonGradient} text-white ${currentMode.shadow}`}
+          className={`mt-6 w-full py-4 px-6 font-bold text-lg rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 bg-gradient-to-r ${currentMode.buttonGradient} text-white ${currentMode.shadow}`}
         >
           {loading ? (
             <>

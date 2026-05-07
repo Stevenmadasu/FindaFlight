@@ -45,8 +45,8 @@ export function computeWeekendScore(departureDate: string, returnDate: string): 
   return Math.min(100, score);
 }
 
-// Popular destinations list for "Take Me Anywhere" mode
-export const ANYWHERE_DESTINATIONS: Record<string, string> = {
+// ─── Domestic destinations for "Take Me Anywhere" ───────────────────────
+export const DOMESTIC_DESTINATIONS: Record<string, string> = {
   'MIA': 'Miami',
   'LAX': 'Los Angeles',
   'LAS': 'Las Vegas',
@@ -65,12 +65,36 @@ export const ANYWHERE_DESTINATIONS: Record<string, string> = {
   'HNL': 'Honolulu',
 };
 
-// City name lookup
+// ─── International destinations for "Take Me Anywhere" ──────────────────
+// Anonymous users: 1 random international destination
+// Authenticated users: all international destinations
+export const INTERNATIONAL_DESTINATIONS: Record<string, string> = {
+  'CUN': 'Cancún',
+  'LHR': 'London',
+  'CDG': 'Paris',
+  'NRT': 'Tokyo',
+  'BCN': 'Barcelona',
+  'FCO': 'Rome',
+  'AMS': 'Amsterdam',
+  'DXB': 'Dubai',
+  'ICN': 'Seoul',
+  'SIN': 'Singapore',
+  'LIS': 'Lisbon',
+  'YYZ': 'Toronto',
+};
+
+// Legacy compat
+export const ANYWHERE_DESTINATIONS: Record<string, string> = {
+  ...DOMESTIC_DESTINATIONS,
+};
+
+// City name lookup (extended)
 export const CITY_NAMES: Record<string, string> = {
-  'MIA': 'Miami', 'LAX': 'Los Angeles', 'LAS': 'Las Vegas', 'MCO': 'Orlando',
-  'SFO': 'San Francisco', 'SEA': 'Seattle', 'DEN': 'Denver', 'BNA': 'Nashville',
-  'AUS': 'Austin', 'SAN': 'San Diego', 'BOS': 'Boston', 'JFK': 'New York',
-  'PHX': 'Phoenix', 'TPA': 'Tampa', 'PDX': 'Portland', 'HNL': 'Honolulu',
+  ...DOMESTIC_DESTINATIONS,
+  ...INTERNATIONAL_DESTINATIONS,
   'ATL': 'Atlanta', 'ORD': 'Chicago', 'DFW': 'Dallas', 'MSP': 'Minneapolis',
   'DTW': 'Detroit', 'CLT': 'Charlotte', 'IAH': 'Houston', 'SLC': 'Salt Lake City',
+  'FRA': 'Frankfurt', 'MUC': 'Munich', 'MAD': 'Madrid', 'IST': 'Istanbul',
+  'SYD': 'Sydney', 'MEL': 'Melbourne', 'GRU': 'São Paulo', 'MEX': 'Mexico City',
+  'HKG': 'Hong Kong', 'BKK': 'Bangkok', 'DEL': 'Delhi', 'DOH': 'Doha',
 };

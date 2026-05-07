@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import CookieConsent from "@/components/CookieConsent";
 import Link from "next/link";
 import FirebaseAnalytics from "@/components/FirebaseAnalytics";
+import { AuthProvider } from "@/context/AuthContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -63,75 +64,77 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased bg-[#0a0f1e] min-h-screen`}
       >
-        <Navbar />
-        <main className="pt-16">{children}</main>
+        <AuthProvider>
+          <Navbar />
+          <main className="pt-16">{children}</main>
 
-        {/* Footer */}
-        <footer className="border-t border-white/5 mt-20" role="contentinfo">
-          <div className="max-w-6xl mx-auto px-4 py-10">
-            <div className="flex flex-col gap-6">
-              {/* Top row: Logo + Policy links */}
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                    <svg
-                      className="w-4 h-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
+          {/* Footer */}
+          <footer className="border-t border-white/5 mt-20" role="contentinfo">
+            <div className="max-w-6xl mx-auto px-4 py-10">
+              <div className="flex flex-col gap-6">
+                {/* Top row: Logo + Policy links */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-400">
+                      FindaFlight
+                    </span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-400">
-                    FindaFlight
-                  </span>
+
+                  <nav aria-label="Footer navigation" className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-500">
+                    <Link href="/about" className="hover:text-gray-300 transition-colors">
+                      About
+                    </Link>
+                    <span className="hidden sm:inline">•</span>
+                    <Link href="/cookie-policy" className="hover:text-gray-300 transition-colors">
+                      Cookies
+                    </Link>
+                    <span className="hidden sm:inline">•</span>
+                    <Link href="/privacy-policy" className="hover:text-gray-300 transition-colors">
+                      Privacy
+                    </Link>
+                    <span className="hidden sm:inline">•</span>
+                    <Link href="/terms" className="hover:text-gray-300 transition-colors">
+                      Terms
+                    </Link>
+                    <span className="hidden sm:inline">•</span>
+                    <span>© {new Date().getFullYear()} FindaFlight</span>
+                  </nav>
                 </div>
 
-                <nav aria-label="Footer navigation" className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-500">
-                  <Link href="/about" className="hover:text-gray-300 transition-colors">
-                    About
-                  </Link>
-                  <span className="hidden sm:inline">•</span>
-                  <Link href="/cookie-policy" className="hover:text-gray-300 transition-colors">
-                    Cookies
-                  </Link>
-                  <span className="hidden sm:inline">•</span>
-                  <Link href="/privacy-policy" className="hover:text-gray-300 transition-colors">
-                    Privacy
-                  </Link>
-                  <span className="hidden sm:inline">•</span>
-                  <Link href="/terms" className="hover:text-gray-300 transition-colors">
-                    Terms
-                  </Link>
-                  <span className="hidden sm:inline">•</span>
-                  <span>© {new Date().getFullYear()} FindaFlight</span>
-                </nav>
-              </div>
-
-              {/* Campaign URL */}
-              <div className="text-center">
-                <p className="text-xs text-gray-600">
-                  Campaign:{' '}
-                  <code className="text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded text-[10px]">
-                    {campaignUrl}
-                  </code>
-                </p>
+                {/* Campaign URL */}
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">
+                    Campaign:{' '}
+                    <code className="text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded text-[10px]">
+                      {campaignUrl}
+                    </code>
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </footer>
+          </footer>
 
-        {/* Cookie Consent Banner */}
-        <CookieConsent />
+          {/* Cookie Consent Banner */}
+          <CookieConsent />
 
-        {/* Firebase Analytics (renders nothing, just initializes tracking) */}
-        <FirebaseAnalytics />
+          {/* Firebase Analytics (renders nothing, just initializes tracking) */}
+          <FirebaseAnalytics />
+        </AuthProvider>
       </body>
     </html>
   );

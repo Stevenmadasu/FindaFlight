@@ -7,6 +7,7 @@ import PairedFlightCard from './PairedFlightCard';
 import RoundTripCard from './RoundTripCard';
 import RecommendationCard from './RecommendationCard';
 import DestinationCard from './DestinationCard';
+import FlexDateBar from './FlexDateBar';
 
 interface FlightResultsProps {
   results: SearchResults;
@@ -23,8 +24,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
   const isLayoverMode = results.mode === 'layover';
   const isAnywhereMode = results.mode === 'anywhere';
   const isStandardRoundTrip = results.mode === 'standard' && (results.pairedItineraries?.length ?? 0) > 0;
-  const isStandardOneWay = results.mode === 'standard' && !isStandardRoundTrip;
-
+  
   // === ANYWHERE MODE ===
   if (isAnywhereMode) {
     const destinations = results.destinations || [];
@@ -136,7 +136,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
     setMaxPrice(null);
   };
 
-  if (totalFlights === 0) {
+  if (totalFlights === 0 && !results.flexDateSummary) {
     return <EmptyState />;
   }
 
@@ -167,6 +167,11 @@ export default function FlightResults({ results }: FlightResultsProps) {
           <p className="text-2xl font-bold text-indigo-400 mt-1">{directCount}</p>
         </div>
       </div>
+
+      {/* Flex Date Discoveries */}
+      {results.flexDateSummary && (
+        <FlexDateBar summary={results.flexDateSummary} />
+      )}
 
       {/* Data Source Indicator */}
       {results.isMockData ? (
@@ -340,7 +345,7 @@ export default function FlightResults({ results }: FlightResultsProps) {
 function EmptyState() {
   return (
     <div className="mt-10 text-center animate-fade-in">
-      <div className="glass-strong rounded-2xl p-10 max-w-lg mx-auto">
+      <div className="glass-strong rounded-2xl p-10 max-lg mx-auto">
         <div className="w-16 h-16 mx-auto mb-5 bg-gradient-to-br from-gray-700/30 to-gray-600/20 rounded-2xl flex items-center justify-center">
           <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

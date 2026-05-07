@@ -3,12 +3,14 @@
  *
  * Calls the backend API routes which securely proxy to SerpApi.
  * Handles scoring, ranking, and result assembly for the frontend.
+ * Supports auth-gated international "Take Me Anywhere" search.
  */
 
 import { rankFlights, rankPairedItineraries, generateRecommendation, buildDestinationCards } from '@/lib/scoring';
-import { FlightSearchParams, FlightOption, SearchResults, SearchMode, RankedFlight, PriceInsights } from '@/types/flight';
-import { ANYWHERE_DESTINATIONS } from '@/lib/utils';
+import { FlightSearchParams, FlightOption, SearchResults, RankedFlight, PriceInsights } from '@/types/flight';
+import { DOMESTIC_DESTINATIONS, INTERNATIONAL_DESTINATIONS, ANYWHERE_DESTINATIONS } from '@/lib/utils';
 import { detectHiddenCityOpportunities } from '@/lib/hiddenCity';
+import { generateFlexDates, aggregateFlexResults, type FlexRange } from '@/lib/flexDates';
 
 /** Response shape from our API routes */
 interface FlightApiResponse {
@@ -43,9 +45,9 @@ async function callSearchApi(params: FlightSearchParams): Promise<FlightApiRespo
  * Main entry point for all flight searches.
  */
 export async function searchFlightsClient(
-  params: FlightSearchParams & { preference?: string; maxPrice?: number },
+  params: FlightSearchParams & { preference?: string; maxPrice?: number; isAuthenticated?: boolean },
 ): Promise<SearchResults> {
-  const { origin, destination, departureDate, returnDate, mode = 'standard', preference = 'best', maxPrice } = params;
+  const { origin, destination, departureDate, returnDate, mode = 'standard', preference = 'best', maxPrice, isAuthenticated = false } = params;
 
   // ─── Basic client-side validation ─────────────────────────────────
   if (!origin || !departureDate) {
@@ -54,15 +56,24 @@ export async function searchFlightsClient(
   if (mode !== 'anywhere' && !destination) {
     throw new Error('Missing required field: destination');
   }
-  const airportRegex = /^[A-Za-z]{3}$/;
-  if (!airportRegex.test(origin)) {
-    throw new Error('Invalid origin airport code. Use 3-letter IATA codes (e.g., CID, MIA)');
+
+  // Accept comma-separated codes and single IATA codes
+  const originCodes = origin.split(',').map(c => c.trim().toUpperCase());
+  for (const c of originCodes) {
+    if (!/^[A-Z]{3}$/.test(c) && !c.startsWith('/')) {
+      throw new Error(`Invalid origin airport code: ${c}`);
+    }
   }
-  if (mode !== 'anywhere' && destination && !airportRegex.test(destination)) {
-    throw new Error('Invalid destination airport code');
-  }
-  if (mode !== 'anywhere' && destination && origin.toUpperCase() === destination.toUpperCase()) {
-    throw new Error('Origin and destination cannot be the same');
+  if (mode !== 'anywhere' && destination) {
+    const destCodes = destination.split(',').map(c => c.trim().toUpperCase());
+    for (const c of destCodes) {
+      if (!/^[A-Z]{3}$/.test(c) && !c.startsWith('/')) {
+        throw new Error(`Invalid destination airport code: ${c}`);
+      }
+    }
+    if (originCodes[0] === destination.split(',')[0]?.trim().toUpperCase()) {
+      throw new Error('Origin and destination cannot be the same');
+    }
   }
 
   // ================================================================
@@ -70,7 +81,7 @@ export async function searchFlightsClient(
   // ================================================================
   if (mode === 'anywhere') {
     if (!returnDate) throw new Error('Return date is required for Take Me Anywhere searches');
-    return searchAnywhere(origin, departureDate, returnDate, preference, maxPrice);
+    return searchAnywhere(origin, departureDate, returnDate, preference, maxPrice, isAuthenticated);
   }
 
   // ================================================================
@@ -85,6 +96,49 @@ export async function searchFlightsClient(
   // STANDARD SEARCH
   // ================================================================
   return searchStandard(origin, destination!, departureDate, returnDate);
+}
+
+/**
+ * Flex-date search (triggered by "Check nearby dates" button).
+ */
+export async function searchFlexDates(
+  origin: string,
+  destination: string,
+  baseDate: string,
+  range: FlexRange = '3',
+): Promise<{ cheapestDate: string; cheapestPrice: number; allDates: { date: string; bestPrice: number; flightCount: number }[] }> {
+  const dates = generateFlexDates(baseDate, range);
+  const results = new Map<string, { bestPrice: number; flightCount: number }>();
+
+  // Search each date (batched to avoid API hammering)
+  const BATCH = 3;
+  for (let i = 0; i < dates.length; i += BATCH) {
+    const batch = dates.slice(i, i + BATCH);
+    const batchResults = await Promise.allSettled(
+      batch.map(async date => {
+        const data = await callSearchApi({
+          origin: origin.toUpperCase(),
+          destination: destination.toUpperCase(),
+          departureDate: date,
+          type: 2,
+        });
+        return { date, data };
+      }),
+    );
+
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') {
+        const { date, data } = result.value;
+        const prices = data.flights.map(f => f.price);
+        results.set(date, {
+          bestPrice: prices.length > 0 ? Math.min(...prices) : 0,
+          flightCount: data.flights.length,
+        });
+      }
+    }
+  }
+
+  return aggregateFlexResults(results);
 }
 
 /**
@@ -109,7 +163,6 @@ async function searchStandard(
 
   // Round-trip pairing
   if (returnDate && rankedFlights.length > 0) {
-    // For round-trip, search for return flights separately
     const returnParams: FlightSearchParams = {
       origin: destination.toUpperCase(),
       destination: origin.toUpperCase(),
@@ -140,7 +193,6 @@ async function searchStandard(
     }
   }
 
-  // One-way results
   const recommendation = generateRecommendation(rankedFlights, false);
   return {
     mode: 'standard',
@@ -162,21 +214,15 @@ async function searchLayover(
   departureDate: string,
   returnDate: string,
 ): Promise<SearchResults> {
-  // 1. Search for standard flights TO the destination (for price baseline)
-  // 2. Search for flights THROUGH the destination (where it's a layover)
-  // Then compare prices to detect hidden-city opportunities
-
   // Standard price baseline
-  const standardParams: FlightSearchParams = {
-    origin: origin.toUpperCase(),
-    destination: destination.toUpperCase(),
-    departureDate,
-    type: 2,
-  };
-
   let standardPrice: number | null = null;
   try {
-    const standardData = await callSearchApi(standardParams);
+    const standardData = await callSearchApi({
+      origin: origin.toUpperCase(),
+      destination: destination.toUpperCase(),
+      departureDate,
+      type: 2,
+    });
     if (standardData.flights.length > 0) {
       standardPrice = Math.min(...standardData.flights.map(f => f.price));
     }
@@ -184,19 +230,16 @@ async function searchLayover(
     console.warn('[SearchClient] Standard route search failed for baseline:', err);
   }
 
-  // Search for flights that go through the destination using show_hidden
-  const throughParams: FlightSearchParams = {
+  // Search with show_hidden + deep_search
+  const throughData = await callSearchApi({
     origin: origin.toUpperCase(),
     destination: destination.toUpperCase(),
     departureDate,
     type: 2,
     show_hidden: true,
     deep_search: true,
-  };
+  });
 
-  const throughData = await callSearchApi(throughParams);
-
-  // Run hidden-city detection
   const annotatedFlights = detectHiddenCityOpportunities(
     throughData.flights,
     destination.toUpperCase(),
@@ -205,17 +248,15 @@ async function searchLayover(
 
   const rankedOutbounds = rankFlights(annotatedFlights);
 
-  // Search for return flights (standard one-way back)
-  const returnParams: FlightSearchParams = {
-    origin: destination.toUpperCase(),
-    destination: origin.toUpperCase(),
-    departureDate: returnDate,
-    type: 2,
-  };
-
+  // Return flights
   let rankedReturns: RankedFlight[] = [];
   try {
-    const returnData = await callSearchApi(returnParams);
+    const returnData = await callSearchApi({
+      origin: destination.toUpperCase(),
+      destination: origin.toUpperCase(),
+      departureDate: returnDate,
+      type: 2,
+    });
     rankedReturns = rankFlights(returnData.flights);
   } catch (err) {
     console.warn('[SearchClient] Return flight search failed:', err);
@@ -233,10 +274,10 @@ async function searchLayover(
       searchParams: { origin: origin.toUpperCase(), destination: destination.toUpperCase(), departureDate, returnDate, mode: 'layover' },
       isMockData: false,
       dataSource: 'api',
+      resultType: 'layover_deal',
     };
   }
 
-  // Fallback to one-way results if pairing fails
   const recommendation = generateRecommendation(rankedOutbounds, false);
   return {
     mode: 'layover',
@@ -246,11 +287,14 @@ async function searchLayover(
     searchParams: { origin: origin.toUpperCase(), destination: destination.toUpperCase(), departureDate, returnDate, mode: 'layover' },
     isMockData: false,
     dataSource: 'api',
+    resultType: 'layover_deal',
   };
 }
 
 /**
- * Take Me Anywhere search — searches multiple destinations.
+ * Take Me Anywhere — auth-gated international destinations.
+ * Anonymous: all domestic + 1 random international
+ * Authenticated: all domestic + all international
  */
 async function searchAnywhere(
   origin: string,
@@ -258,11 +302,30 @@ async function searchAnywhere(
   returnDate: string,
   preference: string,
   maxPrice?: number,
+  isAuthenticated: boolean = false,
 ): Promise<SearchResults> {
   const from = origin.toUpperCase();
-  const allDests = Object.keys(ANYWHERE_DESTINATIONS).filter(d => d !== from);
 
-  // Search destinations in parallel (batched to avoid hammering the API)
+  // Build destination list based on auth status
+  const domesticDests = Object.keys(DOMESTIC_DESTINATIONS).filter(d => d !== from);
+
+  let internationalDests: string[];
+  let requiresAuth = false;
+
+  if (isAuthenticated) {
+    // Full international access
+    internationalDests = Object.keys(INTERNATIONAL_DESTINATIONS).filter(d => d !== from);
+  } else {
+    // 1 random international destination for anonymous users
+    const allIntl = Object.keys(INTERNATIONAL_DESTINATIONS).filter(d => d !== from);
+    const randomIdx = Math.floor(Math.random() * allIntl.length);
+    internationalDests = allIntl.length > 0 ? [allIntl[randomIdx]] : [];
+    requiresAuth = allIntl.length > 1; // Flag that more are available
+  }
+
+  const allDests = [...domesticDests, ...internationalDests];
+
+  // Search destinations in parallel (batched)
   const BATCH_SIZE = 4;
   const rankedOutbound: Record<string, RankedFlight[]> = {};
   const rankedReturns: Record<string, RankedFlight[]> = {};
@@ -272,26 +335,10 @@ async function searchAnywhere(
 
     const results = await Promise.allSettled(
       batch.map(async dest => {
-        const outParams: FlightSearchParams = {
-          origin: from,
-          destination: dest,
-          departureDate,
-          type: 2,
-          maxPrice,
-        };
-
-        const retParams: FlightSearchParams = {
-          origin: dest,
-          destination: from,
-          departureDate: returnDate,
-          type: 2,
-        };
-
         const [outData, retData] = await Promise.all([
-          callSearchApi(outParams),
-          callSearchApi(retParams),
+          callSearchApi({ origin: from, destination: dest, departureDate, type: 2, maxPrice }),
+          callSearchApi({ origin: dest, destination: from, departureDate: returnDate, type: 2 }),
         ]);
-
         return { dest, outData, retData };
       }),
     );
@@ -301,7 +348,6 @@ async function searchAnywhere(
         const { dest, outData, retData } = result.value;
         let outFlights = outData.flights;
 
-        // Apply max price filter
         if (maxPrice) {
           const filtered = outFlights.filter(f => f.price <= maxPrice);
           outFlights = filtered.length > 0 ? filtered : outFlights.slice(0, 2);
@@ -330,5 +376,6 @@ async function searchAnywhere(
     searchParams: { origin: from, destination: 'Anywhere', departureDate, returnDate, mode: 'anywhere' },
     isMockData: false,
     dataSource: 'api',
+    requiresAuth,
   };
 }

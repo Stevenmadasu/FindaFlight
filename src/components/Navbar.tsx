@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import UserMenu from '@/components/UserMenu';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -56,14 +57,15 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* CTA Button - Desktop */}
-          <div className="hidden md:block">
+          {/* CTA Button + User Menu - Desktop */}
+          <div className="hidden md:flex items-center gap-3">
             <Link
               href="/#search"
               className="px-5 py-2 text-sm font-semibold bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-lg transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30"
             >
               Search Flights
             </Link>
+            <UserMenu />
           </div>
 
           {/* Mobile Menu Button */}

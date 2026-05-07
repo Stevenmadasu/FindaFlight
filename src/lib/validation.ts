@@ -2,7 +2,7 @@
  * FindaFlight — Input Validation
  *
  * Validates all user inputs before they reach SerpApi.
- * Returns structured errors for the frontend.
+ * Supports comma-separated IATA codes, Google location IDs, and international searches.
  */
 
 export interface ValidationError {
@@ -16,8 +16,9 @@ export interface ValidationResult {
 }
 
 /**
- * Validate an airport code.
- * Must be 3-letter uppercase IATA code, or a Google location ID (/m/... or /g/...).
+ * Validate an airport code or comma-separated codes.
+ * Accepts: 3-letter IATA codes, comma-separated IATA codes (JFK,LGA,EWR),
+ * and Google location IDs (/m/... or /g/...).
  */
 export function validateAirportCode(code: string, fieldName: string): ValidationError | null {
   if (!code || code.trim() === '') {
@@ -34,9 +35,12 @@ export function validateAirportCode(code: string, fieldName: string): Validation
     return { field: fieldName, message: `Invalid Google location ID: ${trimmed}` };
   }
 
-  // Standard IATA code
-  if (!/^[A-Z]{3}$/.test(trimmed.toUpperCase())) {
-    return { field: fieldName, message: `${fieldName} must be a 3-letter IATA airport code (e.g., CID, MIA)` };
+  // Comma-separated IATA codes (e.g., JFK,LGA,EWR)
+  const codes = trimmed.split(',').map(c => c.trim().toUpperCase());
+  for (const c of codes) {
+    if (!/^[A-Z]{3}$/.test(c)) {
+      return { field: fieldName, message: `Invalid airport code: ${c}. Use 3-letter IATA codes (e.g., CID, MIA)` };
+    }
   }
 
   return null;
@@ -92,6 +96,8 @@ export function validateSearchParams(params: {
   exclude_basic?: boolean;
   gl?: string;
   mode?: string;
+  includeNearby?: boolean;
+  flexDates?: boolean;
 }): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -103,10 +109,13 @@ export function validateSearchParams(params: {
     const destErr = validateAirportCode(params.destination || '', 'destination');
     if (destErr) errors.push(destErr);
 
-    // Origin ≠ Destination
-    if (params.origin && params.destination &&
-        params.origin.toUpperCase() === params.destination.toUpperCase()) {
-      errors.push({ field: 'destination', message: 'Origin and destination cannot be the same' });
+    // Origin ≠ Destination (compare first code of comma-separated list)
+    if (params.origin && params.destination) {
+      const originFirst = params.origin.split(',')[0].trim().toUpperCase();
+      const destFirst = params.destination.split(',')[0].trim().toUpperCase();
+      if (originFirst === destFirst) {
+        errors.push({ field: 'destination', message: 'Origin and destination cannot be the same' });
+      }
     }
   }
 
@@ -177,13 +186,8 @@ export function validateSearchParams(params: {
     errors.push({ field: 'return_times', message: 'return_times should only be used for round-trip searches' });
   }
 
-  // exclude_basic only for domestic US economy
-  if (params.exclude_basic && (params.gl !== 'us' || (params.travel_class && params.travel_class !== 1))) {
-    errors.push({
-      field: 'exclude_basic',
-      message: 'exclude_basic only works for domestic US economy searches (gl=us, travel_class=1)',
-    });
-  }
+  // exclude_basic: only for domestic US economy — apply conditionally, not as hard error
+  // (international searches simply ignore this parameter)
 
   return {
     valid: errors.length === 0,

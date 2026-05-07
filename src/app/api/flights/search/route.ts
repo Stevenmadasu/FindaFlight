@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
       exclude_basic: params.exclude_basic,
       gl: params.gl,
       mode: params.mode,
+      includeNearby: params.includeNearby,
+      flexDates: params.flexDates,
     });
 
     if (!validation.valid) {

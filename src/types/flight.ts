@@ -3,6 +3,18 @@
 // Complete types for SerpApi Google Flights integration
 // ========================================================================
 
+import type { DealScore as DealScoreType } from '@/lib/dealScore';
+import type { FlexDateResult as FlexDateResultType } from '@/lib/flexDates';
+import type { FareAlert as FareAlertType } from '@/lib/fareAlerts';
+import type { AutocompleteSuggestion as AutoSugType, AutocompleteAirport as AutoAirportType } from '@/lib/autocomplete';
+
+// Re-export for convenience
+export type DealScore = DealScoreType;
+export type FlexDateResult = FlexDateResultType;
+export type FareAlert = FareAlertType;
+export type AutocompleteSuggestion = AutoSugType;
+export type AutocompleteAirport = AutoAirportType;
+
 // ─── Search Modes & Preferences ─────────────────────────────────────────
 
 export type SearchMode = 'standard' | 'layover' | 'anywhere';
@@ -41,6 +53,8 @@ export interface FlightSearchParams {
   return_times?: string;
   layover_duration?: string;
   exclude_basic?: boolean;
+  flexDates?: boolean;
+  includeNearby?: boolean;
 }
 
 // ─── SerpApi Request Params (built server-side) ─────────────────────────
@@ -146,6 +160,11 @@ export interface FlightOption {
     name: string;
   };
   savings?: number;
+  savingsPercent?: number;
+  normalRoutePrice?: number;
+
+  // Deal scoring
+  dealScore?: DealScoreType;
 }
 
 // ─── Price Insights ─────────────────────────────────────────────────────
@@ -322,6 +341,12 @@ export interface DestinationCard {
 
 // ─── Combined Search Results ────────────────────────────────────────────
 
+export interface FlexDateSummary {
+  cheapestDate: string;
+  cheapestPrice: number;
+  allDates: FlexDateResultType[];
+}
+
 export interface SearchResults {
   mode: SearchMode;
   flights?: RankedFlight[];
@@ -332,4 +357,7 @@ export interface SearchResults {
   priceInsights?: PriceInsights;
   isMockData: boolean;
   dataSource?: string; // 'api' | 'mock'
+  flexDateSummary?: FlexDateSummary;
+  resultType?: 'standard' | 'layover_deal' | 'flex';
+  requiresAuth?: boolean; // true when Take Me Anywhere results are capped for anonymous users
 }

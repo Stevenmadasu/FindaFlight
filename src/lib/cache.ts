@@ -1,9 +1,10 @@
 /**
  * FindaFlight — Server-Side Cache
  *
- * In-memory cache for SerpApi responses. Caches identical queries for
- * up to 1 hour. SerpApi itself caches identical queries for free,
- * so this avoids redundant network calls entirely.
+ * In-memory cache with separate TTLs:
+ *   - Autocomplete: 24 hours
+ *   - Flight search: 1 hour
+ * Includes request deduplication for in-flight identical queries.
  */
 
 interface CacheEntry<T> {
@@ -12,13 +13,14 @@ interface CacheEntry<T> {
 }
 
 const cache = new Map<string, CacheEntry<unknown>>();
+const inflight = new Map<string, Promise<unknown>>();
 
-// Default TTL: 1 hour (ms)
-const DEFAULT_TTL = 60 * 60 * 1000;
+// TTL constants
+export const TTL_FLIGHTS = 60 * 60 * 1000;       // 1 hour
+export const TTL_AUTOCOMPLETE = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Generate a stable cache key from a params object.
- * Sorts keys alphabetically and stringifies for determinism.
  */
 export function generateCacheKey(params: Record<string, unknown>): string {
   const sorted = Object.keys(params)
@@ -50,7 +52,7 @@ export function getCached<T>(key: string): T | null {
 /**
  * Store a response in cache.
  */
-export function setCache<T>(key: string, data: T, ttlMs: number = DEFAULT_TTL): void {
+export function setCache<T>(key: string, data: T, ttlMs: number = TTL_FLIGHTS): void {
   // Prevent unbounded growth: evict expired entries periodically
   if (cache.size > 500) {
     evictExpired();
@@ -60,6 +62,31 @@ export function setCache<T>(key: string, data: T, ttlMs: number = DEFAULT_TTL): 
     data,
     expiresAt: Date.now() + ttlMs,
   });
+}
+
+/**
+ * Deduplicate in-flight requests. If an identical request is already
+ * in progress, return its promise instead of making a new one.
+ */
+export async function deduplicatedFetch<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  // Check cache first
+  const cached = getCached<T>(key);
+  if (cached) return cached;
+
+  // Check if request is already in flight
+  const existing = inflight.get(key);
+  if (existing) return existing as Promise<T>;
+
+  // Start new request
+  const promise = fetcher().finally(() => {
+    inflight.delete(key);
+  });
+
+  inflight.set(key, promise);
+  return promise;
 }
 
 /**

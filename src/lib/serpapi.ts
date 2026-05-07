@@ -58,6 +58,7 @@ export function buildSearchParams(params: FlightSearchParams): Omit<SerpApiReque
     deep_search: params.deep_search,
     show_hidden: params.show_hidden,
     exclude_basic: params.exclude_basic,
+    include_nearby_airports: params.includeNearby ? true : undefined,
   };
 
   // Strip undefined/null/empty values

@@ -3,13 +3,20 @@
 import { useState } from 'react';
 import SearchForm from '@/components/SearchForm';
 import FlightResults from '@/components/FlightResults';
+import AuthGate from '@/components/AuthGate';
 import { SearchResults, SearchMode, SearchPreference } from '@/types/flight';
 import { searchFlightsClient } from '@/lib/searchClient';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HomePage() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [pendingSearch, setPendingSearch] = useState<any>(null);
+  
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
 
   const handleSearch = async (params: {
     origin: string;
@@ -19,15 +26,31 @@ export default function HomePage() {
     mode: SearchMode;
     preference?: SearchPreference;
     maxPrice?: number;
+    flexDates?: boolean;
+    includeNearby?: boolean;
   }) => {
     setLoading(true);
     setError('');
     setResults(null);
 
     try {
-      // Search via backend API routes → SerpApi
-      const data = await searchFlightsClient(params);
+      // Pass authentication status to the search client
+      const data = await searchFlightsClient({
+        ...params,
+        isAuthenticated
+      });
+      
       setResults(data);
+
+      // If results indicate more are available via auth, and user isn't authed, show gate
+      if (data.requiresAuth && !isAuthenticated) {
+        setPendingSearch(params);
+        // We show results first, then the gate might pop up or be visible as a "load more"
+        // For now, let's just trigger the gate after a short delay if it's "anywhere" mode
+        if (params.mode === 'anywhere') {
+          setTimeout(() => setShowAuthGate(true), 2000);
+        }
+      }
 
       setTimeout(() => {
         document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -39,6 +62,12 @@ export default function HomePage() {
     }
   };
 
+  const handleAuthSuccess = () => {
+    if (pendingSearch) {
+      handleSearch(pendingSearch);
+      setPendingSearch(null);
+    }
+  };
 
   return (
     <div className="min-h-screen hero-pattern">
@@ -89,6 +118,19 @@ export default function HomePage() {
         {results && (
           <div id="results" className="max-w-4xl mx-auto">
             <FlightResults results={results} />
+            
+            {results.requiresAuth && !isAuthenticated && (
+              <div className="mt-8 p-6 glass-strong rounded-2xl border border-indigo-500/20 text-center animate-fade-in">
+                <h3 className="text-lg font-bold text-white mb-2">Want to see more results?</h3>
+                <p className="text-gray-400 text-sm mb-4">International discovery is limited for anonymous users. Create a free account to unlock all destinations.</p>
+                <button 
+                  onClick={() => setShowAuthGate(true)}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold transition-all shadow-lg shadow-indigo-500/20"
+                >
+                  Unlock All Destinations
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -140,6 +182,12 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      <AuthGate 
+        isOpen={showAuthGate} 
+        onClose={() => setShowAuthGate(false)} 
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }
