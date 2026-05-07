@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDatabase } from '@/hooks/useDatabase';
+import { RankedFlight, FlightBadge } from '@/types/flight';
 import AuthGate from './AuthGate';
 
 interface FlightCardProps {
