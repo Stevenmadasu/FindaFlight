@@ -311,5 +311,6 @@ export default function PairedFlightCard({ paired }: PairedFlightCardProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -376,6 +376,7 @@ export default function FlightCard({ flight, index }: FlightCardProps) {
         </div>
       )}
     </div>
+    </>
   );
 }
 

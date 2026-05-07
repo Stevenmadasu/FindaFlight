@@ -276,5 +276,6 @@ export default function RoundTripCard({ paired, index }: RoundTripCardProps) {
         </div>
       )}
     </div>
+    </>
   );
 }
